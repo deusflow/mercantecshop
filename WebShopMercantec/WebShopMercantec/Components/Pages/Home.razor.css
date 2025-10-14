@@ -1,0 +1,107 @@
+/* ===== СТИЛИ ДЛЯ ГЛАВНОЙ СТРАНИЦЫ (КАТАЛОГ) ===== */
+
+/* Заголовок страницы */
+.page-header {
+    margin-bottom: var(--spacing-xxl);
+}
+
+.page-header p {
+    font-size: 21px;
+    color: var(--color-text-secondary);
+}
+
+/* Секция фильтров */
+.filters-section {
+    margin-bottom: var(--spacing-xl);
+}
+
+.filter-buttons {
+    flex-wrap: wrap;
+}
+
+/* Карточка продукта */
+.product-card {
+    display: flex;
+    flex-direction: column;
+    cursor: pointer;
+    /* Убираем тень по умолчанию, так как она теперь на .card */
+}
+
+.product-image {
+    width: 100%;
+    padding-top: 75%; /* Соотношение сторон 4:3 */
+    position: relative;
+    background-color: var(--color-surface-elevated);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--spacing-lg);
+    overflow: hidden;
+}
+
+.placeholder-image {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    /* Градиент вместо иконки */
+    background: linear-gradient(135deg, var(--color-surface-elevated) 25%, var(--color-surface-hover) 100%);
+    transition: transform var(--transition-duration) ease;
+}
+
+.product-card:hover .placeholder-image {
+    transform: scale(1.1);
+}
+
+.product-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 0 var(--spacing-sm);
+}
+
+.product-title {
+    font-size: 21px;
+    font-weight: 600;
+    margin-bottom: var(--spacing-sm);
+    color: var(--color-text-primary);
+}
+
+.product-description {
+    font-size: 15px;
+    color: var(--color-text-secondary);
+    margin-bottom: var(--spacing-md);
+    flex: 1;
+}
+
+.product-price {
+    font-size: 19px;
+    font-weight: 600;
+    color: var(--color-text-primary);
+}
+
+/* Анимации с задержкой */
+.fade-in-item {
+    opacity: 0; /* Начальное состояние для анимации */
+}
+
+.delay-1 { animation-delay: 0.1s; }
+.delay-2 { animation-delay: 0.15s; }
+.delay-3 { animation-delay: 0.2s; }
+.delay-4 { animation-delay: 0.25s; }
+.delay-5 { animation-delay: 0.3s; }
+.delay-6 { animation-delay: 0.35s; }
+.delay-7 { animation-delay: 0.4s; }
+.delay-8 { animation-delay: 0.45s; }
+
+
+/* Адаптивность для поиска */
+@media (max-width: 768px) {
+    .filters-section .flex-center {
+        flex-direction: column;
+        gap: var(--spacing-md);
+    }
+    
+    .search-box input {
+        min-width: 100% !important;
+    }
+}

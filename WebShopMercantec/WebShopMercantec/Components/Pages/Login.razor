@@ -1,0 +1,60 @@
+@page "/login"
+
+<PageTitle>Login - TechShop</PageTitle>
+
+<!-- КОНТЕЙНЕР ДЛЯ ФОРМЫ ВХОДА -->
+<div class="login-container fade-in">
+    <div class="login-card card">
+        
+        <!-- ЗАГОЛОВОК ФОРМЫ -->
+        <div class="login-header">
+            <h2>Sign In</h2>
+            <p>Enter your credentials to access the shop.</p>
+        </div>
+
+        <!-- ФОРМА ВХОДА -->
+        <form class="login-form">
+            
+            <!-- Поле Email -->
+            <div class="form-group">
+                <label class="form-label" for="email">Email Address</label>
+                <input id="email" type="email" class="form-input" placeholder="your.email@mercantec.dk" />
+            </div>
+
+            <!-- Поле Password -->
+            <div class="form-group">
+                <label class="form-label" for="password">Password</label>
+                <input id="password" type="password" class="form-input" placeholder="Enter your password" />
+            </div>
+
+            <!-- Чекбокс "Remember Me" и "Забыл пароль" -->
+            <div class="form-group flex-between">
+                <label class="checkbox-label">
+                    <input type="checkbox" />
+                    <span>Remember me</span>
+                </label>
+                <a href="/forgot-password" class="link-secondary">Forgot password?</a>
+            </div>
+
+            <!-- Кнопка входа -->
+            <button type="submit" class="btn btn-primary btn-large" style="width: 100%;">
+                Sign In
+            </button>
+
+        </form>
+
+        <!-- ДОПОЛНИТЕЛЬНЫЕ ОПЦИИ -->
+        <div class="login-footer">
+            <p class="text-secondary">
+                Don't have an account? <a href="/register" class="link-accent">Contact an administrator</a>
+            </p>
+        </div>
+
+    </div>
+</div>
+
+@code {
+    // Здесь будет логика аутентификации
+    // В будущем интеграция с Active Directory
+}
+

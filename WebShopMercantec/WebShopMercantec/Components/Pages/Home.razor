@@ -1,0 +1,154 @@
+﻿@page "/"
+
+<PageTitle>Catalog - TechShop</PageTitle>
+
+<!-- ЗАГОЛОВОК СТРАНИЦЫ -->
+<div class="page-header text-center fade-in">
+    <h1>Find Your Next Gear</h1>
+    <p class="mx-auto">The best equipment, available for you. Powered by credits.</p>
+</div>
+
+<!-- ФИЛЬТРЫ И ПОИСК -->
+<div class="filters-section mb-xl fade-in delay-1">
+    <div class="flex-center gap-lg">
+        <div class="search-box">
+            <input type="text" class="form-input" placeholder="Search for a MacBook, monitor, etc." style="min-width: 400px;" />
+        </div>
+        <div class="filter-buttons flex gap-md">
+            <button class="btn btn-secondary">All</button>
+            <button class="btn btn-secondary">Laptops</button>
+            <button class="btn btn-secondary">Monitors</button>
+            <button class="btn btn-secondary">Accessories</button>
+        </div>
+    </div>
+</div>
+
+<!-- КАТАЛОГ ПРОДУКТОВ (СЕТКА КАРТОЧЕК) -->
+<div class="grid grid-4">
+    
+    <!-- КАРТОЧКА ПРОДУКТА 1 -->
+    <div class="card product-card fade-in-item delay-1">
+        <div class="product-image">
+            <div class="placeholder-image"></div>
+        </div>
+        <div class="product-info">
+            <h3 class="product-title">MacBook Pro 14"</h3>
+            <p class="product-description">M3 Pro chip, 16GB RAM, 512GB SSD</p>
+            <div class="flex-between mt-lg">
+                <span class="product-price">850 Credits</span>
+                <a href="/product/1" class="btn btn-primary btn-small">View</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- КАРТОЧКА ПРОДУКТА 2 -->
+    <div class="card product-card fade-in-item delay-2">
+        <div class="product-image">
+            <div class="placeholder-image"></div>
+        </div>
+        <div class="product-info">
+            <h3 class="product-title">Dell UltraSharp Monitor</h3>
+            <p class="product-description">27" 4K IPS Display, USB-C</p>
+            <div class="flex-between mt-lg">
+                <span class="product-price">450 Credits</span>
+                <a href="/product/2" class="btn btn-primary btn-small">View</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- КАРТОЧКА ПРОДУКТА 3 -->
+    <div class="card product-card fade-in-item delay-3">
+        <div class="product-image">
+            <div class="placeholder-image"></div>
+        </div>
+        <div class="product-info">
+            <h3 class="product-title">Mechanical Keyboard</h3>
+            <p class="product-description">RGB Backlit, Cherry MX Switches</p>
+            <div class="flex-between mt-lg">
+                <span class="product-price">120 Credits</span>
+                <a href="/product/3" class="btn btn-primary btn-small">View</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- КАРТОЧКА ПРОДУКТА 4 -->
+    <div class="card product-card fade-in-item delay-4">
+        <div class="product-image">
+            <div class="placeholder-image"></div>
+        </div>
+        <div class="product-info">
+            <h3 class="product-title">Wireless Mouse</h3>
+            <p class="product-description">Ergonomic Design, Precision Tracking</p>
+            <div class="flex-between mt-lg">
+                <span class="product-price">45 Credits</span>
+                <a href="/product/4" class="btn btn-primary btn-small">View</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- КАРТОЧКА ПРОДУКТА 5 -->
+    <div class="card product-card fade-in-item delay-5">
+        <div class="product-image">
+            <div class="placeholder-image"></div>
+        </div>
+        <div class="product-info">
+            <h3 class="product-title">ThinkPad X1 Carbon</h3>
+            <p class="product-description">Intel i7, 16GB RAM, 1TB SSD</p>
+            <div class="flex-between mt-lg">
+                <span class="product-price">780 Credits</span>
+                <a href="/product/5" class="btn btn-primary btn-small">View</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- КАРТОЧКА ПРОДУКТА 6 -->
+    <div class="card product-card fade-in-item delay-6">
+        <div class="product-image">
+            <div class="placeholder-image"></div>
+        </div>
+        <div class="product-info">
+            <h3 class="product-title">Noise-Cancelling Headphones</h3>
+            <p class="product-description">Premium Sound Quality, 30h Battery</p>
+            <div class="flex-between mt-lg">
+                <span class="product-price">280 Credits</span>
+                <a href="/product/6" class="btn btn-primary btn-small">View</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- КАРТОЧКА ПРОДУКТА 7 -->
+    <div class="card product-card fade-in-item delay-7">
+        <div class="product-image">
+            <div class="placeholder-image"></div>
+        </div>
+        <div class="product-info">
+            <h3 class="product-title">Webcam 4K</h3>
+            <p class="product-description">Auto Focus, Low Light Correction</p>
+            <div class="flex-between mt-lg">
+                <span class="product-price">150 Credits</span>
+                <a href="/product/7" class="btn btn-primary btn-small">View</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- КАРТОЧКА ПРОДУКТА 8 -->
+    <div class="card product-card fade-in-item delay-8">
+        <div class="product-image">
+            <div class="placeholder-image"></div>
+        </div>
+        <div class="product-info">
+            <h3 class="product-title">USB-C Hub</h3>
+            <p class="product-description">7-in-1, HDMI, USB 3.0, SD Reader</p>
+            <div class="flex-between mt-lg">
+                <span class="product-price">65 Credits</span>
+                <a href="/product/8" class="btn btn-primary btn-small">View</a>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+@code {
+    // Здесь будет логика для загрузки продуктов из базы данных
+    // На данный момент используются статичные данные для демонстрации
+}

@@ -1,0 +1,22 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebShopMercantec", "WebShopMercantec\WebShopMercantec\WebShopMercantec.csproj", "{C16991B0-109F-4688-89C9-85CC24C0E015}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebShopMercantec.Client", "WebShopMercantec\WebShopMercantec.Client\WebShopMercantec.Client.csproj", "{8033A2BC-C143-4228-963D-0A0C423E84CB}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{C16991B0-109F-4688-89C9-85CC24C0E015}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C16991B0-109F-4688-89C9-85CC24C0E015}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C16991B0-109F-4688-89C9-85CC24C0E015}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C16991B0-109F-4688-89C9-85CC24C0E015}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8033A2BC-C143-4228-963D-0A0C423E84CB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8033A2BC-C143-4228-963D-0A0C423E84CB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8033A2BC-C143-4228-963D-0A0C423E84CB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8033A2BC-C143-4228-963D-0A0C423E84CB}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

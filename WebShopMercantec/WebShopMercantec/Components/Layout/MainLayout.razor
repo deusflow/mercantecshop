@@ -1,0 +1,48 @@
+﻿@inherits LayoutComponentBase
+
+<!-- ГЛАВНЫЙ КОНТЕЙНЕР ПРИЛОЖЕНИЯ -->
+<div class="app-container">
+    <!-- НАВИГАЦИОННАЯ ПАНЕЛЬ -->
+    <nav class="navbar">
+        <div class="container navbar-content">
+            <!-- Логотип / Название магазина -->
+            <a href="/" class="navbar-brand">TechShop</a>
+            
+            <!-- Навигационное меню -->
+            <ul class="navbar-menu">
+                <li><a href="/" class="navbar-link">Catalog</a></li>
+                <li><a href="/user-profile" class="navbar-link">Profile</a></li>
+                <li><a href="/admin/users" class="navbar-link">Admin Panel</a></li>
+                <li><a href="/login" class="navbar-link">Login</a></li>
+            </ul>
+            
+            <!-- Баланс кредитов пользователя (пример) -->
+            <div class="user-credits">
+                <span class="badge badge-success">1,250 Credits</span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ОСНОВНОЙ КОНТЕНТ СТРАНИЦЫ -->
+    <main class="main-content">
+        <div class="container">
+            @Body
+        </div>
+    </main>
+
+    <!-- ФУТЕР -->
+    <footer class="footer">
+        <div class="container">
+            <p style="text-align: center; color: var(--color-text-tertiary);">
+                © 2025 TechShop. All rights reserved.
+            </p>
+        </div>
+    </footer>
+</div>
+
+<!-- ОБРАБОТЧИК ОШИБОК BLAZOR -->
+<div id="blazor-error-ui" data-nosnippet>
+    An unhandled error has occurred.
+    <a href="." class="reload">Reload</a>
+    <span class="dismiss">🗙</span>
+</div>

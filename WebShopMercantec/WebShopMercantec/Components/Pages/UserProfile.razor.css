@@ -1,0 +1,135 @@
+/* ===== СТИЛИ ДЛЯ ПРОФИЛЯ ПОЛЬЗОВАТЕЛЯ ===== */
+
+.profile-container {
+    padding: var(--spacing-xl) 0;
+}
+
+.profile-layout {
+    display: grid;
+    grid-template-columns: 320px 1fr; /* Сделаем левую колонку чуть уже */
+    gap: var(--spacing-xl);
+    align-items: start;
+}
+
+/* Боковая панель с информацией */
+.profile-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-lg);
+    position: sticky;
+    top: 120px; /* Чтобы не прилипала к навбару */
+}
+
+.user-info-card {
+    padding: var(--spacing-xl);
+}
+
+.user-avatar {
+    width: 120px;
+    height: 120px;
+    background: linear-gradient(135deg, var(--color-accent), var(--color-accent-hover));
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+    box-shadow: 0 4px 20px rgba(var(--color-accent), 0.4);
+}
+
+.user-avatar span {
+    font-size: 48px;
+    font-weight: 600;
+    color: var(--color-text-primary);
+}
+
+.user-name {
+    margin-bottom: var(--spacing-xs);
+}
+
+.user-email {
+    color: var(--color-text-secondary);
+    font-size: 15px;
+    margin-bottom: var(--spacing-lg);
+}
+
+.credits-display {
+    background-color: var(--color-surface-elevated);
+    padding: var(--spacing-lg);
+    border-radius: var(--radius-lg);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+}
+
+.credits-label {
+    font-size: 15px;
+    color: var(--color-text-secondary);
+}
+
+.credits-amount {
+    font-size: 40px;
+    font-weight: 700;
+    color: var(--color-success);
+    line-height: 1;
+}
+
+/* Статистика */
+.stats-card {
+    padding: var(--spacing-md) var(--spacing-lg);
+}
+
+.stat-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-md) 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.stat-item:first-child {
+    padding-top: 0;
+}
+
+.stat-item:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.stat-label {
+    color: var(--color-text-secondary);
+    font-size: 15px;
+}
+
+.stat-value {
+    font-weight: 600;
+    color: var(--color-text-primary);
+    font-size: 17px;
+}
+
+/* Контент профиля */
+.profile-content {
+    display: flex;
+    flex-direction: column;
+}
+
+.text-success {
+    color: var(--color-success);
+    font-weight: 600;
+}
+
+/* Адаптивность */
+@media (max-width: 968px) {
+    .profile-layout {
+        grid-template-columns: 1fr;
+    }
+    
+    .profile-sidebar {
+        position: static;
+        order: 1; /* Сначала информация, потом таблица */
+    }
+    
+    .profile-content {
+        order: 2;
+    }
+}
+

@@ -1,0 +1,123 @@
+@page "/user-profile"
+
+<PageTitle>User Profile - TechShop</PageTitle>
+
+<!-- ПРОФИЛЬ ПОЛЬЗОВАТЕЛЯ -->
+<div class="profile-container fade-in">
+    
+    <!-- ЗАГОЛОВОК -->
+    <div class="page-header text-center">
+        <h1>Your Profile</h1>
+        <p class="mx-auto">Manage your account, view history, and track your credits.</p>
+    </div>
+
+    <div class="profile-layout mt-xl">
+        
+        <!-- ЛЕВАЯ КОЛОНКА: ИНФОРМАЦИЯ О ПОЛЬЗОВАТЕЛЕ -->
+        <div class="profile-sidebar">
+            
+            <!-- Карточка пользователя -->
+            <div class="card user-info-card text-center">
+                <div class="user-avatar">
+                    <span>JD</span>
+                </div>
+                <h3 class="user-name mt-lg">John Doe</h3>
+                <p class="user-email">john.doe@mercantec.dk</p>
+                
+                <!-- Баланс кредитов -->
+                <div class="credits-display">
+                    <span class="credits-label">Available Credits</span>
+                    <span class="credits-amount">1,250</span>
+                </div>
+            </div>
+
+            <!-- Статистика -->
+            <div class="card stats-card">
+                <div class="stat-item">
+                    <span class="stat-label">Total Purchases</span>
+                    <span class="stat-value">12</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Credits Spent</span>
+                    <span class="stat-value">3,450</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Member Since</span>
+                    <span class="stat-value">Jan 2024</span>
+                </div>
+            </div>
+            <button class="btn btn-secondary" style="width: 100%;">
+                Edit Profile
+            </button>
+        </div>
+
+        <!-- ПРАВАЯ КОЛОНКА: ИСТОРИЯ ПОКУПОК -->
+        <div class="profile-content">
+            
+            <!-- История транзакций -->
+            <div class="card">
+                <div class="flex-between mb-lg">
+                    <h2>Transaction History</h2>
+                    <button class="btn btn-secondary btn-small">Export Data</button>
+                </div>
+
+                <div class="table-container">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Item</th>
+                                <th>Type</th>
+                                <th class="text-right">Credits</th>
+                                <th class="text-center">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Oct 10, 2025</td>
+                                <td>MacBook Pro 14"</td>
+                                <td>Purchase</td>
+                                <td class="text-right">-850</td>
+                                <td class="text-center"><span class="badge badge-success">Completed</span></td>
+                            </tr>
+                            <tr>
+                                <td>Oct 08, 2025</td>
+                                <td>Credits Added</td>
+                                <td>Admin Credit</td>
+                                <td class="text-right text-success">+1,000</td>
+                                <td class="text-center"><span class="badge badge-primary">Credited</span></td>
+                            </tr>
+                            <tr>
+                                <td>Oct 05, 2025</td>
+                                <td>Wireless Mouse</td>
+                                <td>Purchase</td>
+                                <td class="text-right">-45</td>
+                                <td class="text-center"><span class="badge badge-success">Completed</span></td>
+                            </tr>
+                            <tr>
+                                <td>Oct 03, 2025</td>
+                                <td>Dell UltraSharp Monitor</td>
+                                <td>Purchase</td>
+                                <td class="text-right">-450</td>
+                                <td class="text-center"><span class="badge badge-success">Completed</span></td>
+                            </tr>
+                            <tr>
+                                <td>Oct 01, 2025</td>
+                                <td>Mechanical Keyboard</td>
+                                <td>Purchase</td>
+                                <td class="text-right">-120</td>
+                                <td class="text-center"><span class="badge badge-success">Completed</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    // Здесь будет логика для загрузки данных пользователя
+    // и его истории транзакций из базы данных
+}
+
