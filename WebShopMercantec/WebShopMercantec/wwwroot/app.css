@@ -415,11 +415,16 @@ p {
     animation: fadeIn 0.6s cubic-bezier(0.25, 0.8, 0.25, 1) both;
 }
 
-@for $i from 1 through 10 {
-    .delay-#{$i} {
-        animation-delay: #{$i * 0.05}s;
-    }
-}
+.delay-1 { animation-delay: 0.05s; }
+.delay-2 { animation-delay: 0.1s; }
+.delay-3 { animation-delay: 0.15s; }
+.delay-4 { animation-delay: 0.2s; }
+.delay-5 { animation-delay: 0.25s; }
+.delay-6 { animation-delay: 0.3s; }
+.delay-7 { animation-delay: 0.35s; }
+.delay-8 { animation-delay: 0.4s; }
+.delay-9 { animation-delay: 0.45s; }
+.delay-10 { animation-delay: 0.5s; }
 
 /* ===== BLAZOR СПЕЦИФИЧНЫЕ СТИЛИ ===== */
 .blazor-error-boundary {
