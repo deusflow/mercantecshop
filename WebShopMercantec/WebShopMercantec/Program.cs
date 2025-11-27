@@ -1,9 +1,11 @@
-using Microsoft.EntityFrameworkCore; // <-- Добавьте эту строку
+using Microsoft.EntityFrameworkCore;
 using WebShopMercantec.Client.Pages;
 using WebShopMercantec.Components;
 using WebShopMercantec.Models;
-namespace WebShopMercantec;
 
+
+
+namespace WebShopMercantec;
 public class Program
 {
     public static void Main(string[] args)
@@ -16,11 +18,16 @@ public class Program
             .AddInteractiveWebAssemblyComponents();
         //db
         
-       var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-       builder.Services.AddDbContext<SnipeItContext>(options =>
-           options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString))
-       );
-       
+        // подтягиваю строку подключения 
+        var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+
+        // Регистрируем контекст 
+        builder.Services.AddDbContext<SnipeItContext>(options =>
+            options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
+        
+       //Swaaaaagger maaa boy
+        builder.Services.AddEndpointsApiExplorer(); // Нужно для Minimal API
+        builder.Services.AddSwaggerGen();
 
         var app = builder.Build();
 
@@ -28,6 +35,8 @@ public class Program
         if (app.Environment.IsDevelopment())
         {
             app.UseWebAssemblyDebugging();
+            app.UseSwagger(); // Генерирует JSON файл
+            app.UseSwaggerUI();
         }
         else
         {
@@ -45,6 +54,14 @@ public class Program
             .AddInteractiveServerRenderMode()
             .AddInteractiveWebAssemblyRenderMode()
             .AddAdditionalAssemblies(typeof(Client._Imports).Assembly);
+        
+        // Временный тест: Получить первые 5 ассетов из базы
+        app.MapGet("/test-assets", async (SnipeItContext db) =>
+            {
+                // Берем 5 штук, чтобы не грузить всю базу
+                return await db.Assets.Take(5).ToListAsync();
+            })
+            .WithName("GetAssets");
 
         app.Run();
     }
