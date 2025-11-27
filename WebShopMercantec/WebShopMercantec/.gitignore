@@ -1,0 +1,66 @@
+# Dependencies
+/packages/
+/node_modules/
+
+# Tmp files
+/tmp/
+
+# Build results
+[Bb]in/
+[Oo]bj/
+
+# Visual Studio / Rider
+.vs/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# User-specific files
+*.DotSettings.user
+
+# Build results of an ATL project
+[Dd]ebug/
+[Rr]elease/
+x64/
+*_i.c
+*_p.c
+*_h.h
+*.ilk
+*.meta
+*.obj
+*.pch
+*.pdb
+*.pgc
+*.pgd
+*.rsp
+*.sbr
+*.tlb
+*.tli
+*.tlh
+*.tmp
+*.tmp_proj
+*.log
+*.vspscc
+*.vssscc
+.builds
+*.pidb
+*.log
+*.scc
+
+# NuGet
+*.nupkg
+# The packages folder can be ignored because of Package Restore
+**/[Pp]ackages/*
+# except build/, which is used as an MSBuild target.
+!**/[Pp]ackages/build/
+# Roslyn
+*.ruleset
+
+# Secrets
+secrets.json
+appsettings.Development.json
+
+# Mac / Linux
+.DS_Store

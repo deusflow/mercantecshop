@@ -1,6 +1,7 @@
+using Microsoft.EntityFrameworkCore; // <-- Добавьте эту строку
 using WebShopMercantec.Client.Pages;
 using WebShopMercantec.Components;
-
+using WebShopMercantec.Models;
 namespace WebShopMercantec;
 
 public class Program
@@ -13,6 +14,13 @@ public class Program
         builder.Services.AddRazorComponents()
             .AddInteractiveServerComponents()
             .AddInteractiveWebAssemblyComponents();
+        //db
+        
+       var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+       builder.Services.AddDbContext<SnipeItContext>(options =>
+           options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString))
+       );
+       
 
         var app = builder.Build();
 
