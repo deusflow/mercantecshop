@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using WebShopMercantec.Client.Pages;
 using WebShopMercantec.Components;
 using WebShopMercantec.Models;
+using System.IO;
 
 
 
@@ -16,6 +17,10 @@ public class Program
         builder.Services.AddRazorComponents()
             .AddInteractiveServerComponents()
             .AddInteractiveWebAssemblyComponents();
+        
+        // Добавляем поддержку контроллеров (для API)
+        builder.Services.AddControllers();
+        
         //db
         
         // подтягиваю строку подключения 
@@ -27,7 +32,16 @@ public class Program
         
        //Swaaaaagger maaa boy
         builder.Services.AddEndpointsApiExplorer(); // Нужно для Minimal API
-        builder.Services.AddSwaggerGen();
+        builder.Services.AddSwaggerGen(options =>
+        {
+            // ...existing configuration...
+            var xmlFile = "WebShopMercantec.xml";
+            var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+            if (File.Exists(xmlPath))
+            {
+                options.IncludeXmlComments(xmlPath);
+            }
+        });
 
         var app = builder.Build();
 
@@ -50,6 +64,10 @@ public class Program
         app.UseAntiforgery();
 
         app.MapStaticAssets();
+        
+        // Регистрируем маршруты для API контроллеров
+        app.MapControllers();
+        
         app.MapRazorComponents<App>()
             .AddInteractiveServerRenderMode()
             .AddInteractiveWebAssemblyRenderMode()
