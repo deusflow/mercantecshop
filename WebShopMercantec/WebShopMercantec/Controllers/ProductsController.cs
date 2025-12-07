@@ -1,12 +1,10 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using WebShopMercantec.Models;
+using WebShopMercantec.Models; 
+using WebShopMercantec.Shared.DTOs; 
 
 namespace WebShopMercantec.Controllers;
 
-/// <summary>
-/// API для работы с товарами (assets) из Snipe-IT.
-/// </summary>
 [ApiController]
 [Route("api/[controller]")]
 public class ProductsController : ControllerBase
@@ -18,44 +16,41 @@ public class ProductsController : ControllerBase
         _context = context;
     }
 
-    /// <summary>
-    /// Возвращает список товаров (первые 20 записей из Snipe-IT Assets).
-    /// </summary>
-    /// <remarks>
-    /// Используется для витрины вебшопа. В будущем можно добавить фильтры, пагинацию и маппинг в ProductDto.
-    /// </remarks>
-    /// <response code="200">Список товаров успешно получен.</response>
-    /// <response code="404">Товары не найдены в базе.</response>
+    // GET: api/products
     [HttpGet]
-    public async Task<ActionResult<List<Asset>>> GetProducts()
+    public async Task<ActionResult<List<ProductDto>>> GetProducts()
     {
-        // Идем в базу -> Таблица Assets -> Берем первые 20 штук -> Превращаем в список
-        var products = await _context.Assets.Take(20).ToListAsync();
+        // 1. Достаем "сырые" данные из базы
+        var assets = await _context.Assets
+            .Take(20)
+            .AsNoTracking() 
+            .ToListAsync();
 
-        if (products.Count == 0)
+        if (assets == null || assets.Count == 0)
         {
-            return NotFound("Products not found"); // Возвращаем статус 404 Not Found, если нет данных
+            return NotFound("Товары не найдены");
         }
 
-        return Ok(products); // 200ok
-    }
-    
-    /// <summary>
-    /// Возвращает товар по ID.
-    /// </summary>
-    /// <param name="id">ID товара (Asset ID из Snipe-IT).</param>
-    /// <response code="200">Товар найден.</response>
-    /// <response code="404">Товар с указанным ID не найден.</response>
-    [HttpGet("{id}")]
-    public async Task<ActionResult<Asset>> GetProduct(int id)
-    {
-        var product = await _context.Assets.FindAsync(id);
-
-        if (product == null)
+        // 2. Маппинг (Превращение Asset -> ProductDto)
+        var productDtos = assets.Select(asset => new ProductDto
         {
-            return NotFound($"Product with ID {id} not found");
-        }
+            // Если asset.Id вдруг long/uint, приводим к int принудительно
+            Id = (int)asset.Id, 
+            
+            Name = asset.Name ?? "Без названия",
+            AssetTag = asset.AssetTag ?? "",
+            ImageUrl = asset.Image ?? "", 
+            StatusLabel = "Available", 
+            
+            // PurchaseCost это decimal?, если null, ставим 0
+            Price = asset.PurchaseCost ?? 0, 
+            
+            // В ProductDto нет поля Description, но есть Notes. Пишем туда.
+            Notes = $"Серийный номер: {asset.Serial}", 
+            
+            CategoryName = "General" 
+        }).ToList();
 
-        return Ok(product);
+        return Ok(productDtos);
     }
 }
