@@ -3,6 +3,7 @@ using WebShopMercantec.Client.Pages;
 using WebShopMercantec.Components;
 using WebShopMercantec.Models;
 using System.IO;
+using WebShopMercantec.Services;
 
 
 
@@ -34,7 +35,6 @@ public class Program
         builder.Services.AddEndpointsApiExplorer(); // Нужно для Minimal API
         builder.Services.AddSwaggerGen(options =>
         {
-            // ...existing configuration...
             var xmlFile = "WebShopMercantec.xml";
             var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
             if (File.Exists(xmlPath))
@@ -42,6 +42,7 @@ public class Program
                 options.IncludeXmlComments(xmlPath);
             }
         });
+        builder.Services.AddScoped<IProductService, ProductService>();
 
         var app = builder.Build();
 

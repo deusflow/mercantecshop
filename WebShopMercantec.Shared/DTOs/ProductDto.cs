@@ -2,16 +2,21 @@ namespace WebShopMercantec.Shared.DTOs;
 
 public class ProductDto
 {
+    
     public int Id { get; set; }
-    
-    // Название товара (например, "MacBook Pro 16")
+
     public string Name { get; set; } = string.Empty;
-    
-    // Инвентарный номер (чтобы кладовщик понимал, о чем речь)
+
     public string AssetTag { get; set; } = string.Empty;
     
-    // Ссылка на картинку (Snipe-IT хранит их отдельно, но мы склеим путь)
-    public string ImageUrl { get; set; } = string.Empty;
+    
+    public string? Image { get; set; } 
+    
+    public string? ModelName { get; set; } 
+    
+    public string? Serial { get; set; }
+    
+    public int StatusId { get; set; }
     
     // Категория (Ноутбуки, Мониторы...)
     public string CategoryName { get; set; } = string.Empty;
