@@ -1,47 +1,52 @@
 namespace WebShopMercantec.Shared.DTOs;
 
+/// <summary>
+/// DTO for User (employees/customers who use the shop)
+/// Used for displaying user information, managing accounts, and tracking credits
+/// Contains profile information, role permissions, and credit balance
+/// </summary>
 public class UserDto
 {
-    // Основные поля
+    // Main fields
     public int Id { get; set; }
 
     public string Username { get; set; } = string.Empty;
 
     public string Email { get; set; } = string.Empty;
 
-    // Имя пользователя
+    // User's name
     public string FirstName { get; set; } = string.Empty;
     
     public string LastName { get; set; } = string.Empty;
     
-    // Полное имя (вычисляемое)
+    // Full name (computed)
     public string FullName => $"{FirstName} {LastName}".Trim();
 
-    // Аватар/фото профиля
+    // Avatar/profile photo
     public string? Avatar { get; set; }
     
-    // Инициалы для отображения (JD для John Doe)
+    // Initials for display (JD for John Doe)
     public string Initials => $"{FirstName.FirstOrDefault()}{LastName.FirstOrDefault()}".ToUpper();
 
-    // Роль/права доступа
+    // Role/permissions
     public string Role { get; set; } = "User"; // User, Admin, Manager
     
     public string? Permissions { get; set; }
 
-    // КРЕДИТЫ - основная валюта в системе
+    // CREDITS - main currency in the system
     public decimal AvailableCredits { get; set; }
     
     public decimal TotalCreditsSpent { get; set; }
 
-    // Статистика пользователя
+    // User statistics
     public int TotalPurchases { get; set; }
 
-    // Контактная информация
+    // Contact information
     public string? Phone { get; set; }
     
-    public string? JobTitle { get; set; }
+    public string? Jobtitle { get; set; } // Note: lowercase 'title' to match model
 
-    // Местоположение и организация
+    // Location and organization
     public int? LocationId { get; set; }
     
     public string? LocationName { get; set; }
@@ -49,12 +54,12 @@ public class UserDto
     public int? DepartmentId { get; set; }
     
     public string? DepartmentName { get; set; }
-    
+
     public int? CompanyId { get; set; }
     
     public string? CompanyName { get; set; }
 
-    // Адрес
+    // Address
     public string? Address { get; set; }
     
     public string? City { get; set; }
@@ -65,37 +70,42 @@ public class UserDto
     
     public string? Zip { get; set; }
 
-    // Статус активации
-    public bool Activated { get; set; }
-    
-    public bool ShowInList { get; set; } = true;
-
-    // Менеджер
+    // Manager
     public int? ManagerId { get; set; }
     
     public string? ManagerName { get; set; }
 
-    // Номер сотрудника
-    public string? EmployeeNumber { get; set; }
+    // Employee number
+    public string? EmployeeNum { get; set; } // Match model field name
 
-    // Даты работы
+    // Work dates
     public DateTime? StartDate { get; set; }
     
     public DateTime? EndDate { get; set; }
 
-    // Дата регистрации (Member Since)
+    // Account status
+    public bool IsActive { get; set; } = true;
+    
+    public bool Activated { get; set; } // Match model field name
+    
+    public bool ShowInList { get; set; } = true;
+
+    // VIP status (for special users)
+    public bool Vip { get; set; } // Match model field name
+    
+    // Remote work
+    public bool Remote { get; set; } // Match model field name
+
+    // Timestamps
     public DateTime? CreatedAt { get; set; }
     
-    public DateTime? LastLogin { get; set; }
-
-    // VIP статус (для особых пользователей)
-    public bool IsVip { get; set; }
+    public DateTime? UpdatedAt { get; set; }
     
-    // Удаленная работа
-    public bool IsRemote { get; set; }
+    public DateTime? LastLogin { get; set; } // Match model field name
 
-    // Дополнительная информация
+    // Additional information
     public string? Notes { get; set; }
     
     public string? Website { get; set; }
 }
+
