@@ -4,6 +4,8 @@ using WebShopMercantec.Components;
 using WebShopMercantec.Models;
 using System.IO;
 using WebShopMercantec.Services;
+using WebShopMercantec.Repositories;
+using WebShopMercantec.Repositories.Specific;
 
 
 
@@ -30,6 +32,20 @@ public class Program
         // Регистрируем контекст 
         builder.Services.AddDbContext<SnipeItContext>(options =>
             options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
+        
+        // === REPOSITORY PATTERN ===
+        // Generic Repository
+        builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
+        
+        // Регистрируем специфичные репозитории
+        builder.Services.AddScoped<IUserRepository, UserRepository>();
+        builder.Services.AddScoped<IProductRepository, ProductRepository>();
+        builder.Services.AddScoped<IOrderRepository, OrderRepository>();
+        builder.Services.AddScoped<IAccessoryRepository, AccessoryRepository>();
+        
+        // Регистрируем Unit of Work (главный координатор всех репозиториев)
+        builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+        // === END REPOSITORY PATTERN ===
         
        //Swaaaaagger maaa boy
         builder.Services.AddEndpointsApiExplorer(); // Нужно для Minimal API
