@@ -8,6 +8,7 @@ using WebShopMercantec.Repositories;
 using WebShopMercantec.Repositories.Specific;
 using WebShopMercantec.Middleware;
 using Serilog;
+using FluentValidation;
 
 
 
@@ -69,6 +70,11 @@ public class Program
         // Регистрируем Unit of Work (главный координатор всех репозиториев)
         builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
         // === END REPOSITORY PATTERN ===
+        
+        // === FLUENT VALIDATION ===
+        // Автоматическая регистрация всех валидаторов из сборки
+        builder.Services.AddValidatorsFromAssemblyContaining<Program>();
+        // === END VALIDATION ===
         
        //Swaaaaagger maaa boy
         builder.Services.AddEndpointsApiExplorer(); // Нужно для Minimal API
