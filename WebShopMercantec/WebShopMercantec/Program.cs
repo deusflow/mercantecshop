@@ -6,6 +6,8 @@ using System.IO;
 using WebShopMercantec.Services;
 using WebShopMercantec.Repositories;
 using WebShopMercantec.Repositories.Specific;
+using WebShopMercantec.Middleware;
+using Serilog;
 
 
 
@@ -14,7 +16,28 @@ public class Program
 {
     public static void Main(string[] args)
     {
-        var builder = WebApplication.CreateBuilder(args);
+        // === НАСТРОЙКА SERILOG ===
+        // Конфигурируем Serilog ДО создания builder
+        Log.Logger = new LoggerConfiguration()
+            .MinimumLevel.Information()
+            .MinimumLevel.Override("Microsoft", Serilog.Events.LogEventLevel.Warning)
+            .MinimumLevel.Override("Microsoft.EntityFrameworkCore", Serilog.Events.LogEventLevel.Warning)
+            .Enrich.FromLogContext()
+            .WriteTo.Console()
+            .WriteTo.File(
+                "logs/webshop-.txt",
+                rollingInterval: RollingInterval.Day,
+                retainedFileCountLimit: 30)
+            .CreateLogger();
+
+        try
+        {
+            Log.Information("Starting WebShopMercantec application");
+            
+            var builder = WebApplication.CreateBuilder(args);
+
+            // Используем Serilog вместо стандартного логирования
+            builder.Host.UseSerilog();
 
         // Add services to the container.
         builder.Services.AddRazorComponents()
@@ -62,6 +85,11 @@ public class Program
 
         var app = builder.Build();
 
+        // === ERROR HANDLING MIDDLEWARE ===
+        // ВАЖНО: Должен быть ПЕРВЫМ в pipeline!
+        // Перехватывает все исключения из последующих middleware
+        app.UseErrorHandling();
+
         // Configure the HTTP request pipeline.
         if (app.Environment.IsDevelopment())
         {
@@ -99,5 +127,14 @@ public class Program
             .WithName("GetAssets");
 
         app.Run();
+        }
+        catch (Exception ex)
+        {
+            Log.Fatal(ex, "Application terminated unexpectedly");
+        }
+        finally
+        {
+            Log.CloseAndFlush();
+        }
     }
 }

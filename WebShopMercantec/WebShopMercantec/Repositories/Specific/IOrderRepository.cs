@@ -49,6 +49,8 @@ public interface IOrderRepository : IRepository<CheckoutRequest>
     /// Получить заказы по статусу с пагинацией
     /// </summary>
     /// <param name="status">Pending, Fulfilled, Canceled</param>
+    /// <param name="pageNumber">Номер страницы</param>
+    /// <param name="pageSize">Размер страницы</param>
     Task<(IEnumerable<CheckoutRequest> Orders, int TotalCount)> GetOrdersByStatusPagedAsync(
         string status, 
         int pageNumber, 

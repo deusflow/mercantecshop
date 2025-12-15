@@ -181,8 +181,8 @@ public class AccessoryRepository : Repository<Accessory>, IAccessoryRepository
 
     /// <summary>
     /// Получить аксессуары с низким запасом
-    /// Qty <= MinAmt (если MinAmt задан)
-    /// Или Qty < 5 (если MinAmt не задан)
+    /// Qty меньше или равно MinAmt (если MinAmt задан)
+    /// Или Qty меньше 5 (если MinAmt не задан)
     /// </summary>
     public async Task<IEnumerable<Accessory>> GetLowStockAccessoriesAsync()
     {

@@ -72,7 +72,7 @@ public interface IAccessoryRepository : IRepository<Accessory>
     
     /// <summary>
     /// Получить аксессуары с низким запасом
-    /// Qty <= MinAmt (minimum amount)
+    /// Qty меньше или равно MinAmt (minimum amount)
     /// Для уведомлений и пополнения запасов
     /// </summary>
     Task<IEnumerable<Accessory>> GetLowStockAccessoriesAsync();
