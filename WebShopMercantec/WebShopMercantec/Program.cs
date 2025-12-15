@@ -76,6 +76,10 @@ public class Program
         builder.Services.AddValidatorsFromAssemblyContaining<Program>();
         // === END VALIDATION ===
         
+        // === SERVICES ===
+        builder.Services.AddScoped<IProductService, ProductService>();
+        // === END SERVICES ===
+        
        //Swaaaaagger maaa boy
         builder.Services.AddEndpointsApiExplorer(); // Нужно для Minimal API
         builder.Services.AddSwaggerGen(options =>
@@ -87,7 +91,6 @@ public class Program
                 options.IncludeXmlComments(xmlPath);
             }
         });
-        builder.Services.AddScoped<IProductService, ProductService>();
 
         var app = builder.Build();
 
