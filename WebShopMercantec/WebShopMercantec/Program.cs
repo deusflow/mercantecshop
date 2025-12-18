@@ -6,7 +6,8 @@ using System.IO;
 using WebShopMercantec.Services;
 using WebShopMercantec.Repositories;
 using WebShopMercantec.Repositories.Specific;
-
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 
 
 namespace WebShopMercantec;
@@ -20,34 +21,34 @@ public class Program
         builder.Services.AddRazorComponents()
             .AddInteractiveServerComponents()
             .AddInteractiveWebAssemblyComponents();
-        
+
         // Добавляем поддержку контроллеров (для API)
         builder.Services.AddControllers();
-        
+
         //db
-        
+
         // подтягиваю строку подключения 
         var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
         // Регистрируем контекст 
         builder.Services.AddDbContext<SnipeItContext>(options =>
             options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
-        
+
         // === REPOSITORY PATTERN ===
         // Generic Repository
         builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
-        
+
         // Регистрируем специфичные репозитории
         builder.Services.AddScoped<IUserRepository, UserRepository>();
         builder.Services.AddScoped<IProductRepository, ProductRepository>();
         builder.Services.AddScoped<IOrderRepository, OrderRepository>();
         builder.Services.AddScoped<IAccessoryRepository, AccessoryRepository>();
-        
+
         // Регистрируем Unit of Work (главный координатор всех репозиториев)
         builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
         // === END REPOSITORY PATTERN ===
-        
-       //Swaaaaagger maaa boy
+
+        //Swaaaaagger maaa boy
         builder.Services.AddEndpointsApiExplorer(); // Нужно для Minimal API
         builder.Services.AddSwaggerGen(options =>
         {
@@ -59,6 +60,27 @@ public class Program
             }
         });
         builder.Services.AddScoped<IProductService, ProductService>();
+
+        builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+            .AddJwtBearer(options =>
+            {
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuer = true,
+                    ValidateAudience = true,
+                    ValidateLifetime = true,
+                    ValidateIssuerSigningKey = true,
+                    ClockSkew = TimeSpan.Zero,
+                    ValidIssuer = builder.Configuration["Jwt:Issuer"] ?? Environment.GetEnvironmentVariable("JWT__Issuer"),
+                    ValidAudience = builder.Configuration["Jwt:Audience"] ?? Environment.GetEnvironmentVariable("JWT__Audience"),
+                    IssuerSigningKey = new SymmetricSecurityKey(
+                        System.Text.Encoding.UTF8.GetBytes(
+                            builder.Configuration["Jwt:SecretKey"]
+                            ?? Environment.GetEnvironmentVariable("JWT__SecretKey")
+                            ?? throw new InvalidOperationException("JWT SecretKey must be configured")
+                        ))
+                };
+            });
 
         var app = builder.Build();
 
