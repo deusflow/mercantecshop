@@ -10,16 +10,13 @@ namespace WebShopMercantec.Controllers;
 public class CategoriesController : ControllerBase
 {
     private readonly ICategoryService _categoryService;
-    private readonly ILogger<CategoriesController> _logger;
     private readonly IValidator<CategoryDto> _validator;
 
     public CategoriesController(
         ICategoryService categoryService, 
-        ILogger<CategoriesController> logger,
         IValidator<CategoryDto> validator)
     {
         _categoryService = categoryService;
-        _logger = logger;
         _validator = validator;
     }
 
