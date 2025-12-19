@@ -1,67 +1,40 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using WebShopMercantec.Models;
 using WebShopMercantec.Shared.DTOs;
-using WebShopMercantec.Exceptions;
+using WebShopMercantec.Services;
 
 namespace WebShopMercantec.Controllers;
 
+/// <summary>
+/// API контроллер для работы с локациями (Locations)
+/// </summary>
 [Route("api/[controller]")]
 [ApiController]
 public class LocationsController : ControllerBase
 {
-    private readonly SnipeItContext _context;
+    private readonly ILocationService _locationService;
 
-    public LocationsController(SnipeItContext context)
+    public LocationsController(ILocationService locationService)
     {
-        _context = context;
+        _locationService = locationService;
     }
 
+    /// <summary>
+    /// Получить все локации
+    /// </summary>
     [HttpGet]
     public async Task<ActionResult<IEnumerable<LocationDto>>> GetAll()
     {
-        var locations = await _context.Locations
-            .AsQueryable()
-            .Where(l => l.DeletedAt == null)
-            .OrderBy(l => l.Name)
-            .Select(l => new LocationDto
-            {
-                Id = (int)l.Id,
-                Name = l.Name ?? "Unknown",
-                Address = l.Address,
-                Address2 = l.Address2,
-                City = l.City,
-                State = l.State,
-                Country = l.Country,
-                Zip = l.Zip
-            })
-            .ToListAsync();
-
+        var locations = await _locationService.GetAllLocationsAsync();
         return Ok(locations);
     }
 
+    /// <summary>
+    /// Получить локацию по ID
+    /// </summary>
     [HttpGet("{id}")]
     public async Task<ActionResult<LocationDto>> GetById(int id)
     {
-        var location = await _context.Locations
-            .AsQueryable()
-            .Where(l => l.Id == id && l.DeletedAt == null)
-            .Select(l => new LocationDto
-            {
-                Id = (int)l.Id,
-                Name = l.Name ?? "Unknown",
-                Address = l.Address,
-                Address2 = l.Address2,
-                City = l.City,
-                State = l.State,
-                Country = l.Country,
-                Zip = l.Zip
-            })
-            .FirstOrDefaultAsync();
-
-        if (location == null)
-            throw new NotFoundException("Location", id);
-
+        var location = await _locationService.GetLocationByIdAsync(id);
         return Ok(location);
     }
 }

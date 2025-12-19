@@ -66,6 +66,11 @@ public class Program
         builder.Services.AddScoped<IProductRepository, ProductRepository>();
         builder.Services.AddScoped<IOrderRepository, OrderRepository>();
         builder.Services.AddScoped<IAccessoryRepository, AccessoryRepository>();
+        builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
+        builder.Services.AddScoped<IManufacturerRepository, ManufacturerRepository>();
+        builder.Services.AddScoped<ISupplierRepository, SupplierRepository>();
+        builder.Services.AddScoped<ILocationRepository, LocationRepository>();
+        builder.Services.AddScoped<IStatusLabelRepository, StatusLabelRepository>();
         
         // Регистрируем Unit of Work (главный координатор всех репозиториев)
         builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
@@ -78,6 +83,11 @@ public class Program
         
         // === SERVICES ===
         builder.Services.AddScoped<IProductService, ProductService>();
+        builder.Services.AddScoped<ICategoryService, CategoryService>();
+        builder.Services.AddScoped<IManufacturerService, ManufacturerService>();
+        builder.Services.AddScoped<ISupplierService, SupplierService>();
+        builder.Services.AddScoped<ILocationService, LocationService>();
+        builder.Services.AddScoped<IStatusLabelService, StatusLabelService>();
         // === END SERVICES ===
         
        //Swaaaaagger maaa boy

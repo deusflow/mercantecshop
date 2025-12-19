@@ -1,72 +1,51 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using WebShopMercantec.Models;
 using WebShopMercantec.Shared.DTOs;
-using WebShopMercantec.Exceptions;
+using WebShopMercantec.Services;
 
 namespace WebShopMercantec.Controllers;
 
+/// <summary>
+/// API контроллер для работы со статусами (StatusLabels)
+/// </summary>
 [Route("api/[controller]")]
 [ApiController]
 public class StatusLabelsController : ControllerBase
 {
-    private readonly SnipeItContext _context;
+    private readonly IStatusLabelService _statusLabelService;
 
-    public StatusLabelsController(SnipeItContext context)
+    public StatusLabelsController(IStatusLabelService statusLabelService)
     {
-        _context = context;
+        _statusLabelService = statusLabelService;
     }
 
+    /// <summary>
+    /// Получить все статусы
+    /// </summary>
     [HttpGet]
     public async Task<ActionResult<IEnumerable<StatusLabelDto>>> GetAll()
     {
-        var statusLabels = await _context.StatusLabels
-            .AsQueryable()
-            .Where(s => s.DeletedAt == null)
-            .OrderBy(s => s.Name)
-            .Select(s => new StatusLabelDto
-            {
-                Id = (int)s.Id,
-                Name = s.Name ?? "Unknown",
-                Color = s.Color,
-                Deployable = s.Deployable,
-                Pending = s.Pending,
-                Archived = s.Archived,
-                Notes = s.Notes,
-                ShowInNav = s.ShowInNav,
-                DefaultLabel = s.DefaultLabel,
-                AssetsCount = 0 // TODO: Calculate from database
-            })
-            .ToListAsync();
-
+        var statusLabels = await _statusLabelService.GetAllStatusLabelsAsync();
         return Ok(statusLabels);
     }
 
+    /// <summary>
+    /// Получить статус по ID
+    /// </summary>
     [HttpGet("{id}")]
     public async Task<ActionResult<StatusLabelDto>> GetById(int id)
     {
-        var statusLabel = await _context.StatusLabels
-            .AsQueryable()
-            .Where(s => s.Id == id && s.DeletedAt == null)
-            .Select(s => new StatusLabelDto
-            {
-                Id = (int)s.Id,
-                Name = s.Name ?? "Unknown",
-                Color = s.Color,
-                Deployable = s.Deployable,
-                Pending = s.Pending,
-                Archived = s.Archived,
-                Notes = s.Notes,
-                ShowInNav = s.ShowInNav,
-                DefaultLabel = s.DefaultLabel,
-                AssetsCount = 0 // TODO: Calculate from database
-            })
-            .FirstOrDefaultAsync();
-
-        if (statusLabel == null)
-            throw new NotFoundException("StatusLabel", id);
-
+        var statusLabel = await _statusLabelService.GetStatusLabelByIdAsync(id);
         return Ok(statusLabel);
+    }
+
+    /// <summary>
+    /// Получить статусы, доступные для deployment (можно выдавать пользователям)
+    /// </summary>
+    [HttpGet("deployable")]
+    public async Task<ActionResult<IEnumerable<StatusLabelDto>>> GetDeployable()
+    {
+        var statusLabels = await _statusLabelService.GetDeployableStatusesAsync();
+        return Ok(statusLabels);
     }
 }
 

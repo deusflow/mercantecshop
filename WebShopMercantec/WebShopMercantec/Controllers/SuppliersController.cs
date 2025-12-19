@@ -1,77 +1,40 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using WebShopMercantec.Models;
 using WebShopMercantec.Shared.DTOs;
-using WebShopMercantec.Exceptions;
+using WebShopMercantec.Services;
 
 namespace WebShopMercantec.Controllers;
 
+/// <summary>
+/// API контроллер для работы с поставщиками (Suppliers)
+/// </summary>
 [Route("api/[controller]")]
 [ApiController]
 public class SuppliersController : ControllerBase
 {
-    private readonly SnipeItContext _context;
+    private readonly ISupplierService _supplierService;
 
-    public SuppliersController(SnipeItContext context)
+    public SuppliersController(ISupplierService supplierService)
     {
-        _context = context;
+        _supplierService = supplierService;
     }
 
+    /// <summary>
+    /// Получить всех поставщиков
+    /// </summary>
     [HttpGet]
     public async Task<ActionResult<IEnumerable<SupplierDto>>> GetAll()
     {
-        var suppliers = await _context.Suppliers
-            .AsQueryable()
-            .Where(s => s.DeletedAt == null)
-            .OrderBy(s => s.Name)
-            .Select(s => new SupplierDto
-            {
-                Id = (int)s.Id,
-                Name = s.Name,
-                Address = s.Address,
-                City = s.City,
-                State = s.State,
-                Country = s.Country,
-                Zip = s.Zip,
-                Contact = s.Contact,
-                Phone = s.Phone,
-                Fax = s.Fax,
-                Email = s.Email,
-                Url = s.Url,
-                Notes = s.Notes
-            })
-            .ToListAsync();
-
+        var suppliers = await _supplierService.GetAllSuppliersAsync();
         return Ok(suppliers);
     }
 
+    /// <summary>
+    /// Получить поставщика по ID
+    /// </summary>
     [HttpGet("{id}")]
     public async Task<ActionResult<SupplierDto>> GetById(int id)
     {
-        var supplier = await _context.Suppliers
-            .AsQueryable()
-            .Where(s => s.Id == id && s.DeletedAt == null)
-            .Select(s => new SupplierDto
-            {
-                Id = (int)s.Id,
-                Name = s.Name,
-                Address = s.Address,
-                City = s.City,
-                State = s.State,
-                Country = s.Country,
-                Zip = s.Zip,
-                Contact = s.Contact,
-                Phone = s.Phone,
-                Fax = s.Fax,
-                Email = s.Email,
-                Url = s.Url,
-                Notes = s.Notes
-            })
-            .FirstOrDefaultAsync();
-
-        if (supplier == null)
-            throw new NotFoundException("Supplier", id);
-
+        var supplier = await _supplierService.GetSupplierByIdAsync(id);
         return Ok(supplier);
     }
 }

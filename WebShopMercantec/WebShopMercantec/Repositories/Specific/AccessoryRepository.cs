@@ -235,4 +235,139 @@ public class AccessoryRepository : Repository<Accessory>, IAccessoryRepository
         // Update вызовется автоматически через EF Core change tracking
         return true;
     }
+
+    // === МЕТОДЫ ДЛЯ ПОЛУЧЕНИЯ ENRICHED ДАННЫХ (СО СВЯЗЯМИ) ===
+
+    /// <summary>
+    /// Получить доступные аксессуары со всеми связанными данными
+    /// </summary>
+    public async Task<IEnumerable<EnrichedAccessory>> GetAvailableAccessoriesEnrichedAsync()
+    {
+        var query = from accessory in _context.Accessories
+                    where accessory.DeletedAt == null &&
+                          accessory.Requestable &&
+                          accessory.Qty > 0
+                    // LEFT JOIN с Category
+                    join category in _context.Categories on accessory.CategoryId equals (int?)category.Id into categoryGroup
+                    from category in categoryGroup.DefaultIfEmpty()
+                    // LEFT JOIN с Manufacturer
+                    join manufacturer in _context.Manufacturers on accessory.ManufacturerId equals (int?)manufacturer.Id into mfgGroup
+                    from manufacturer in mfgGroup.DefaultIfEmpty()
+                    // LEFT JOIN с Supplier
+                    join supplier in _context.Suppliers on accessory.SupplierId equals (int?)supplier.Id into supplierGroup
+                    from supplier in supplierGroup.DefaultIfEmpty()
+                    // LEFT JOIN с Location
+                    join location in _context.Locations on accessory.LocationId equals (int?)location.Id into locationGroup
+                    from location in locationGroup.DefaultIfEmpty()
+                    select new EnrichedAccessory
+                    {
+                        Accessory = accessory,
+                        Category = category,
+                        Manufacturer = manufacturer,
+                        Supplier = supplier,
+                        Location = location
+                    };
+
+        return await query.AsNoTracking().OrderBy(e => e.Accessory.Name).ToListAsync();
+    }
+
+    /// <summary>
+    /// Получить аксессуар по ID со всеми связанными данными
+    /// </summary>
+    public async Task<EnrichedAccessory?> GetEnrichedAccessoryByIdAsync(uint id)
+    {
+        var query = from accessory in _context.Accessories
+                    where accessory.Id == id && accessory.DeletedAt == null
+                    join category in _context.Categories on accessory.CategoryId equals (int?)category.Id into categoryGroup
+                    from category in categoryGroup.DefaultIfEmpty()
+                    join manufacturer in _context.Manufacturers on accessory.ManufacturerId equals (int?)manufacturer.Id into mfgGroup
+                    from manufacturer in mfgGroup.DefaultIfEmpty()
+                    join supplier in _context.Suppliers on accessory.SupplierId equals (int?)supplier.Id into supplierGroup
+                    from supplier in supplierGroup.DefaultIfEmpty()
+                    join location in _context.Locations on accessory.LocationId equals (int?)location.Id into locationGroup
+                    from location in locationGroup.DefaultIfEmpty()
+                    select new EnrichedAccessory
+                    {
+                        Accessory = accessory,
+                        Category = category,
+                        Manufacturer = manufacturer,
+                        Supplier = supplier,
+                        Location = location
+                    };
+
+        return await query.AsNoTracking().FirstOrDefaultAsync();
+    }
+
+    /// <summary>
+    /// Получить аксессуары с пагинацией СО СВЯЗЯМИ
+    /// </summary>
+    public async Task<(IEnumerable<EnrichedAccessory> Accessories, int TotalCount)> GetAccessoriesPagedEnrichedAsync(
+        int pageNumber,
+        int pageSize,
+        int? categoryId = null,
+        int? manufacturerId = null,
+        string? searchTerm = null,
+        bool? availableOnly = true)
+    {
+        var query = from accessory in _context.Accessories
+                    join category in _context.Categories on accessory.CategoryId equals (int?)category.Id into categoryGroup
+                    from category in categoryGroup.DefaultIfEmpty()
+                    join manufacturer in _context.Manufacturers on accessory.ManufacturerId equals (int?)manufacturer.Id into mfgGroup
+                    from manufacturer in mfgGroup.DefaultIfEmpty()
+                    join supplier in _context.Suppliers on accessory.SupplierId equals (int?)supplier.Id into supplierGroup
+                    from supplier in supplierGroup.DefaultIfEmpty()
+                    join location in _context.Locations on accessory.LocationId equals (int?)location.Id into locationGroup
+                    from location in locationGroup.DefaultIfEmpty()
+                    where accessory.DeletedAt == null
+                    select new 
+                    { 
+                        accessory, 
+                        category, 
+                        manufacturer, 
+                        supplier, 
+                        location 
+                    };
+
+        // Фильтры
+        if (availableOnly == true)
+        {
+            query = query.Where(x => x.accessory.Requestable && x.accessory.Qty > 0);
+        }
+
+        if (categoryId.HasValue)
+            query = query.Where(x => x.accessory.CategoryId == (uint)categoryId);
+
+        if (manufacturerId.HasValue)
+            query = query.Where(x => x.accessory.ManufacturerId == manufacturerId);
+
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            var search = searchTerm.ToLower();
+            query = query.Where(x => 
+                (x.accessory.Name != null && x.accessory.Name.ToLower().Contains(search)) ||
+                (x.accessory.ModelNumber != null && x.accessory.ModelNumber.ToLower().Contains(search)));
+        }
+
+        // Подсчет общего количества
+        var totalCount = await query.CountAsync();
+
+        // Пагинация
+        var results = await query
+            .OrderBy(x => x.accessory.Name)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .Select(x => new EnrichedAccessory
+            {
+                Accessory = x.accessory,
+                Category = x.category,
+                Manufacturer = x.manufacturer,
+                Supplier = x.supplier,
+                Location = x.location
+            })
+            .AsNoTracking()
+            .ToListAsync();
+
+        return (results, totalCount);
+    }
 }
+

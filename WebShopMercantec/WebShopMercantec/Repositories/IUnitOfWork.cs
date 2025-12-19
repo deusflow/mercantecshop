@@ -77,10 +77,30 @@ public interface IUnitOfWork : IDisposable
     /// </summary>
     IAccessoryRepository Accessories { get; }
     
-    // Можно добавить другие репозитории по мере необходимости:
-    // IRepository<Category> Categories { get; }
-    // IRepository<Manufacturer> Manufacturers { get; }
-    // и т.д.
+    /// <summary>
+    /// Репозиторий для работы с категориями (таблица Categories)
+    /// </summary>
+    ICategoryRepository Categories { get; }
+    
+    /// <summary>
+    /// Репозиторий для работы с производителями (таблица Manufacturers)
+    /// </summary>
+    IManufacturerRepository Manufacturers { get; }
+    
+    /// <summary>
+    /// Репозиторий для работы с поставщиками (таблица Suppliers)
+    /// </summary>
+    ISupplierRepository Suppliers { get; }
+    
+    /// <summary>
+    /// Репозиторий для работы с локациями (таблица Locations)
+    /// </summary>
+    ILocationRepository Locations { get; }
+    
+    /// <summary>
+    /// Репозиторий для работы со статусами (таблица StatusLabels)
+    /// </summary>
+    IStatusLabelRepository StatusLabels { get; }
     
     
     // === МЕТОДЫ УПРАВЛЕНИЯ ===

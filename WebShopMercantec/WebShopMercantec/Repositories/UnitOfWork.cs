@@ -18,6 +18,11 @@ public class UnitOfWork : IUnitOfWork
     private IProductRepository? _products;
     private IOrderRepository? _orders;
     private IAccessoryRepository? _accessories;
+    private ICategoryRepository? _categories;
+    private IManufacturerRepository? _manufacturers;
+    private ISupplierRepository? _suppliers;
+    private ILocationRepository? _locations;
+    private IStatusLabelRepository? _statusLabels;
 
     /// <summary>
     /// Конструктор - принимает DbContext через Dependency Injection
@@ -74,6 +79,66 @@ public class UnitOfWork : IUnitOfWork
         {
             _accessories ??= new AccessoryRepository(_context);
             return _accessories;
+        }
+    }
+
+    /// <summary>
+    /// Репозиторий категорий
+    /// </summary>
+    public ICategoryRepository Categories
+    {
+        get
+        {
+            _categories ??= new CategoryRepository(_context);
+            return _categories;
+        }
+    }
+
+    /// <summary>
+    /// Репозиторий производителей (Manufacturers)
+    /// </summary>
+    public IManufacturerRepository Manufacturers
+    {
+        get
+        {
+            _manufacturers ??= new ManufacturerRepository(_context);
+            return _manufacturers;
+        }
+    }
+
+    /// <summary>
+    /// Репозиторий поставщиков (Suppliers)
+    /// </summary>
+    public ISupplierRepository Suppliers
+    {
+        get
+        {
+            _suppliers ??= new SupplierRepository(_context);
+            return _suppliers;
+        }
+    }
+
+    /// <summary>
+    /// Репозиторий локаций (Locations)
+    /// </summary>
+    public ILocationRepository Locations
+    {
+        get
+        {
+            _locations ??= new LocationRepository(_context);
+            return _locations;
+        }
+    }
+
+    /// <summary>
+    /// Репозиторий статусов (StatusLabels)
+    /// </summary>
+    public IStatusLabelRepository StatusLabels
+    {
+        get
+        {
+            _statusLabels ??= new StatusLabelRepository(_context);
+            return _statusLabels;
         }
     }
 

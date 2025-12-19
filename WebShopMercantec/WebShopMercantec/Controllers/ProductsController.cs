@@ -44,7 +44,7 @@ public class ProductsController : ControllerBase
 
     /// <summary>
     /// Получить продукты с пагинацией и фильтрами
-    /// GET /api/products/paged?page=1&pageSize=20&categoryId=3&search=laptop
+    /// GET /api/products/paged?page=1&amp;pageSize=20&amp;categoryId=3&amp;search=laptop
     /// </summary>
     [HttpGet("paged")]
     public async Task<ActionResult> GetProductsPaged(
@@ -128,7 +128,7 @@ public class ProductsController : ControllerBase
 
     /// <summary>
     /// Получить аксессуары с пагинацией
-    /// GET /api/products/accessories/paged?page=1&pageSize=20
+    /// GET /api/products/accessories/paged?page=1&amp;pageSize=20
     /// </summary>
     [HttpGet("accessories/paged")]
     public async Task<ActionResult> GetAccessoriesPaged(
@@ -174,4 +174,3 @@ public class ProductsController : ControllerBase
         return Ok(new { accessoryId = id, quantity, available = isAvailable });
     }
 }
-
