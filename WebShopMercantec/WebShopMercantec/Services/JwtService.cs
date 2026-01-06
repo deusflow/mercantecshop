@@ -7,7 +7,7 @@ using WebShopMercantec.Models;
 
 namespace WebShopMercantec.Services
 {
-    public class JwtService
+    public class JwtService : IJwtService
     {
         private readonly IConfiguration _configuration;
         private readonly string _secretKey;
@@ -44,14 +44,14 @@ namespace WebShopMercantec.Services
                 ?? "7");
         }
 
-        public string GenerateToken(User user, string? roleName = null)
+        public string GenerateToken(UserDto user, string? roleName = null)
         {
 
             if (string.IsNullOrEmpty(roleName))
             {
-                throw new InvalidOperationException($"Роль пользователя {user.Email} не загружена. Проверьте Include(u => u.Role) в запросе.");
+                throw new InvalidOperationException($"Role not found for {user.Email}. Try checking Include(u => u.Role).");
             }
-            var jti = Guid.NewGuid().ToString(); // Уникальный идентификатор токена
+            var jti = Guid.NewGuid().ToString();
 
             var claims = new[]
             {

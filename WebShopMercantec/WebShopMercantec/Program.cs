@@ -60,6 +60,8 @@ public class Program
             }
         });
         builder.Services.AddScoped<IProductService, ProductService>();
+        builder.Services.AddScoped<IJwtService, JwtService>();
+        builder.Services.AddScoped<IUserService, UserService>();
 
         builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>
