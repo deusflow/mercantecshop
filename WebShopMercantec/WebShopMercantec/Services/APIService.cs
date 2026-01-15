@@ -1,0 +1,18 @@
+﻿using Microsoft.JSInterop;
+
+namespace WebShopMercantec.Services
+{
+    public partial class APIService
+    {
+        private readonly HttpClient _httpClient;
+        private readonly IJSRuntime _js;
+
+        public APIService(HttpClient httpClient, IJSRuntime js)
+        {
+            _httpClient = httpClient;
+            _js = js;
+        }
+
+        public Uri GetBaseAddress() => _httpClient.BaseAddress ?? new Uri("/");
+    }
+}

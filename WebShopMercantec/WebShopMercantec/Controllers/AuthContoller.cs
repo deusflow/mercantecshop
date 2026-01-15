@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System;
+using WebShopMercantec.Models;
 using WebShopMercantec.Services;
 
 
@@ -30,6 +31,9 @@ namespace WebShopMercantec.Controllers
             var user = await _userService.GetUserByLogin(loginValue);
             if (user == null)
                 return BadRequest("Wrong username/email or password.");
+
+            if (!BCrypt.Net.BCrypt.Verify(rq.Password, user.Password))
+                return BadRequest(".");
 
             var token = _jwt.GenerateToken(user, user.Role);
 

@@ -25,7 +25,7 @@ namespace WebShopMercantec.Services
                         on asset.ModelId equals (int?)model.Id 
                         
                         // ФИЛЬТРЫ
-                        where (asset.StatusId ?? 0) == 1       // Статус 1 (Готов)
+                        where new[] {6, 7, 8 }.Contains(asset.StatusId ?? 0)       // Статус 1 (Готов)
                            && (asset.Archived ?? false) == false // Не в архиве (безопасная проверка на null)
                         
                         select new ProductDto

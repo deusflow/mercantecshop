@@ -1,4 +1,6 @@
 @page "/login"
+@inject APIService api
+@inject NavigationManager Nav
 
 <PageTitle>Login - TechShop</PageTitle>
 
@@ -12,19 +14,29 @@
             <p>Enter your credentials to access the shop.</p>
         </div>
 
+        @if (showMessage)
+        {
+            <div class="error-box" style="color:red;">
+                ❌ @errorMessage
+            </div>
+        }
+
         <!-- ФОРМА ВХОДА -->
-        <form class="login-form">
-            
+        <EditForm model="user" method="post" OnValidSubmit="() => HandleSubmit()" FormName="LoginForm"class="login-form">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
             <!-- Поле Email -->
             <div class="form-group">
-                <label class="form-label" for="email">Email Address</label>
-                <input id="email" type="email" class="form-input" placeholder="your.email@mercantec.dk" />
+                <label class="form-label" for="email">E-mail:</label>
+                <InputText @bind-Value="user.Username" id="email" type="email" class="form-input" placeholder="your.email@mercantec.dk" />
+                <ValidationMessage For="@(() => user.Username)" />
             </div>
 
             <!-- Поле Password -->
             <div class="form-group">
-                <label class="form-label" for="password">Password</label>
-                <input id="password" type="password" class="form-input" placeholder="Enter your password" />
+                <label class="form-label" for="password">Password:</label>
+                <InputText @bind-Value="user.Password" id="password" type="password" class="form-input" placeholder="Enter your password" />
+                <ValidationMessage For="@(() => user.Password)" />
             </div>
 
             <!-- Чекбокс "Remember Me" и "Забыл пароль" -->
@@ -41,7 +53,7 @@
                 Sign In
             </button>
 
-        </form>
+        </EditForm>
 
         <!-- ДОПОЛНИТЕЛЬНЫЕ ОПЦИИ -->
         <div class="login-footer">
@@ -54,7 +66,23 @@
 </div>
 
 @code {
-    // Здесь будет логика аутентификации
-    // В будущем интеграция с Active Directory
+    private LoginDto user = new LoginDto();
+    string errorMessage = "Incorrect login or password. Please try again.";
+    bool showMessage = false;
+
+    private async Task HandleSubmit()
+    {
+        showMessage = false;
+
+        bool success = await api.Login(user);
+        if (success)
+        {
+            Nav.NavigateTo("/", forceLoad: true);
+        }
+        else
+        {
+            showMessage = true;
+        }
+    }
 }
 
