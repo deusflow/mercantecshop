@@ -9,14 +9,15 @@ namespace WebShopMercantec.Mapping;
 /// </summary>
 public static class ProductMapping
 {
+    // === ОСНОВНОЙ МЕТОД: Из AssetWithDetails (все связи заполнены) ===
+
     /// <summary>
-    /// Преобразовать Asset в ProductDto
+    /// Преобразовать AssetWithDetails в ProductDto (все связанные поля заполнены)
     /// </summary>
-    public static ProductDto MapAssetToDto(Asset asset)
+    public static ProductDto MapFromDetails(AssetWithDetails details)
     {
-        // TODO: В будущем получать связанные данные через репозитории
-        // (Model, Category, Manufacturer, StatusLabel)
-        
+        var (asset, model, category, manufacturer, statusLabel, location, supplier) = details;
+
         return new ProductDto
         {
             Id = (int)asset.Id,
@@ -24,19 +25,93 @@ public static class ProductMapping
             AssetTag = asset.AssetTag ?? "N/A",
             Image = asset.Image,
             ModelId = asset.ModelId,
-            ModelName = null, // TODO: получить из Model
+            ModelName = model?.Name,
+            ModelNumber = model?.ModelNumber,
             Serial = asset.Serial,
             StatusId = asset.StatusId,
-            StatusLabel = asset.StatusId.HasValue ? $"Status {asset.StatusId}" : "Unknown",
-            CategoryName = "Unknown", // TODO: получить из Category через Model
+            StatusLabel = statusLabel?.Name ?? "Unknown",
+            CategoryName = category?.Name ?? "Uncategorized",
+            ManufacturerId = manufacturer != null ? (int?)manufacturer.Id : null,
+            ManufacturerName = manufacturer?.Name,
+            LocationId = asset.LocationId,
+            LocationName = location?.Name,
+            SupplierId = asset.SupplierId,
+            SupplierName = supplier?.Name,
+            CompanyId = (int?)asset.CompanyId,
             Notes = asset.Notes,
             PurchaseCost = asset.PurchaseCost,
             Price = asset.PurchaseCost ?? 0m,
             OrderNumber = asset.OrderNumber,
-            ManufacturerId = null, // TODO: получить из Model
+            RtdLocationId = asset.RtdLocationId,
+            AssignedTo = asset.AssignedTo,
+            AssignedType = asset.AssignedType,
+            IsAvailable = asset.StatusId is 1 or 2
+                          && asset.AssignedTo == null
+                          && asset.Requestable == 1
+                          && (asset.Archived == false || asset.Archived == null),
+            Requestable = asset.Requestable == 1,
+            Archived = asset.Archived,
+            WarrantyMonths = asset.WarrantyMonths,
+            PurchaseDate = asset.PurchaseDate.HasValue
+                ? DateTime.Parse(asset.PurchaseDate.Value.ToString("yyyy-MM-dd"))
+                : null,
+            AssetEolDate = asset.AssetEolDate.HasValue
+                ? DateTime.Parse(asset.AssetEolDate.Value.ToString("yyyy-MM-dd"))
+                : null,
+            LastCheckout = asset.LastCheckout,
+            LastCheckin = asset.LastCheckin,
+            ExpectedCheckin = asset.ExpectedCheckin.HasValue
+                ? DateTime.Parse(asset.ExpectedCheckin.Value.ToString("yyyy-MM-dd"))
+                : null,
+            CreatedAt = asset.CreatedAt,
+            UpdatedAt = asset.UpdatedAt
+        };
+    }
+
+    /// <summary>
+    /// Преобразовать список AssetWithDetails в список ProductDto
+    /// </summary>
+    public static IEnumerable<ProductDto> MapFromDetailsList(IEnumerable<AssetWithDetails> detailsList)
+    {
+        return detailsList.Select(MapFromDetails);
+    }
+
+    // === LEGACY МЕТОД: Из Asset напрямую (без связей, для обратной совместимости) ===
+
+    /// <summary>
+    /// Преобразовать Asset в ProductDto (связанные данные будут null/Unknown)
+    /// DEPRECATED: Используйте MapFromDetails с AssetWithDetails
+    /// </summary>
+    public static ProductDto MapAssetToDto(Asset asset)
+    {
+        return new ProductDto
+        {
+            Id = (int)asset.Id,
+            Name = asset.Name ?? "Unknown Product",
+            AssetTag = asset.AssetTag ?? "N/A",
+            Image = asset.Image,
+            ModelId = asset.ModelId,
+            ModelName = null,
+            Serial = asset.Serial,
+            StatusId = asset.StatusId,
+            StatusLabel = asset.StatusId.HasValue ? $"Status {asset.StatusId}" : "Unknown",
+            CategoryName = "Unknown",
+            Notes = asset.Notes,
+            PurchaseCost = asset.PurchaseCost,
+            Price = asset.PurchaseCost ?? 0m,
+            OrderNumber = asset.OrderNumber,
+            ManufacturerId = null,
             ManufacturerName = null,
             ModelNumber = null,
-            LocationId = asset.LocationId
+            LocationId = asset.LocationId,
+            IsAvailable = asset.StatusId is 1 or 2
+                          && asset.AssignedTo == null
+                          && asset.Requestable == 1
+                          && (asset.Archived == false || asset.Archived == null),
+            Requestable = asset.Requestable == 1,
+            Archived = asset.Archived,
+            CreatedAt = asset.CreatedAt,
+            UpdatedAt = asset.UpdatedAt
         };
     }
 
@@ -48,8 +123,47 @@ public static class ProductMapping
         return assets.Select(MapAssetToDto);
     }
 
+    // === АКСЕССУАРЫ ===
+
     /// <summary>
-    /// Преобразовать Accessory в AccessoryDto
+    /// Преобразовать AccessoryWithDetails в AccessoryDto (все связанные поля заполнены)
+    /// </summary>
+    public static AccessoryDto MapFromDetails(AccessoryWithDetails details)
+    {
+        var (accessory, category, manufacturer, location, supplier) = details;
+
+        return new AccessoryDto
+        {
+            Id = (int)accessory.Id,
+            Name = accessory.Name ?? "Unknown Accessory",
+            CategoryId = accessory.CategoryId,
+            CategoryName = category?.Name,
+            Qty = accessory.Qty,
+            Requestable = accessory.Requestable,
+            LocationId = accessory.LocationId,
+            LocationName = location?.Name,
+            PurchaseDate = accessory.PurchaseDate.HasValue
+                ? DateTime.Parse(accessory.PurchaseDate.Value.ToString("yyyy-MM-dd"))
+                : null,
+            PurchaseCost = accessory.PurchaseCost,
+            OrderNumber = accessory.OrderNumber,
+            CompanyId = (int?)accessory.CompanyId,
+            MinAmt = accessory.MinAmt,
+            ManufacturerId = accessory.ManufacturerId,
+            ManufacturerName = manufacturer?.Name,
+            ModelNumber = accessory.ModelNumber,
+            Image = accessory.Image,
+            SupplierId = accessory.SupplierId,
+            SupplierName = supplier?.Name,
+            Notes = accessory.Notes,
+            CreatedAt = accessory.CreatedAt,
+            UpdatedAt = accessory.UpdatedAt
+        };
+    }
+
+    /// <summary>
+    /// Преобразовать Accessory в AccessoryDto (связанные данные будут null)
+    /// DEPRECATED: Используйте MapFromDetails с AccessoryWithDetails
     /// </summary>
     public static AccessoryDto MapAccessoryToDto(Accessory accessory)
     {
@@ -58,11 +172,11 @@ public static class ProductMapping
             Id = (int)accessory.Id,
             Name = accessory.Name ?? "Unknown Accessory",
             CategoryId = accessory.CategoryId,
-            CategoryName = null, // TODO: получить из Category
+            CategoryName = null,
             Qty = accessory.Qty,
             Requestable = accessory.Requestable,
             LocationId = accessory.LocationId,
-            LocationName = null, // TODO: получить из Location
+            LocationName = null,
             PurchaseDate = accessory.PurchaseDate.HasValue 
                 ? DateTime.Parse(accessory.PurchaseDate.Value.ToString("yyyy-MM-dd")) 
                 : null,
@@ -71,11 +185,11 @@ public static class ProductMapping
             CompanyId = (int?)accessory.CompanyId,
             MinAmt = accessory.MinAmt,
             ManufacturerId = accessory.ManufacturerId,
-            ManufacturerName = null, // TODO: получить из Manufacturer
+            ManufacturerName = null,
             ModelNumber = accessory.ModelNumber,
             Image = accessory.Image,
             SupplierId = accessory.SupplierId,
-            SupplierName = null, // TODO: получить из Supplier
+            SupplierName = null,
             Notes = accessory.Notes,
             CreatedAt = accessory.CreatedAt,
             UpdatedAt = accessory.UpdatedAt

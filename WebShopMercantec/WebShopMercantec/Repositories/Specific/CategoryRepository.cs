@@ -71,5 +71,42 @@ public class CategoryRepository : Repository<Category>, ICategoryRepository
 
         return assetsCount + accessoriesCount;
     }
+
+    /// <summary>
+    /// Получить количество элементов для всех категорий одним запросом
+    /// Вместо N+1 запросов — всего 2 запроса (assets + accessories)
+    /// </summary>
+    public async Task<Dictionary<uint, int>> GetAllItemsCountsBatchAsync()
+    {
+        // 1. Подсчитываем Assets по категориям (через Model -> CategoryId)
+        var assetCounts = await (
+            from model in _context.Models.AsNoTracking()
+            where model.DeletedAt == null && model.CategoryId.HasValue
+            join asset in _context.Assets.AsNoTracking().Where(a => a.DeletedAt == null)
+                on (int?)model.Id equals asset.ModelId
+            group asset by (uint)model.CategoryId!.Value into g
+            select new { CategoryId = g.Key, Count = g.Count() }
+        ).ToDictionaryAsync(x => x.CategoryId, x => x.Count);
+
+        // 2. Подсчитываем Accessories по категориям
+        var accessoryCounts = await _context.Accessories
+            .AsNoTracking()
+            .Where(a => a.DeletedAt == null && a.CategoryId.HasValue)
+            .GroupBy(a => (uint)a.CategoryId!.Value)
+            .Select(g => new { CategoryId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.CategoryId, x => x.Count);
+
+        // 3. Мержим результаты
+        var result = new Dictionary<uint, int>(assetCounts);
+        foreach (var (categoryId, count) in accessoryCounts)
+        {
+            if (result.ContainsKey(categoryId))
+                result[categoryId] += count;
+            else
+                result[categoryId] = count;
+        }
+
+        return result;
+    }
 }
 

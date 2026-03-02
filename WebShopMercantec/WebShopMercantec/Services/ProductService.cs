@@ -1,6 +1,3 @@
-using Microsoft.EntityFrameworkCore;
-using WebShopMercantec.Models;
-using WebShopMercantec.Shared.DTOs;
 using WebShopMercantec.Repositories;
 using WebShopMercantec.Exceptions;
 using WebShopMercantec.Mapping;
@@ -9,7 +6,7 @@ namespace WebShopMercantec.Services;
 
 /// <summary>
 /// Сервис для работы с продуктами и аксессуарами
-/// Использует Repository Pattern и обрабатывает ошибки
+/// Использует Repository Pattern с загрузкой связанных данных
 /// </summary>
 public class ProductService : IProductService
 {
@@ -28,13 +25,8 @@ public class ProductService : IProductService
     {
         _logger.LogInformation("Getting all available products");
         
-        var assets = await _unitOfWork.Products.GetAvailableProductsAsync();
-        
-        var products = new List<ProductDto>();
-        foreach (var asset in assets)
-        {
-            products.Add(await MapAssetToDtoAsync(asset));
-        }
+        var assetsWithDetails = await _unitOfWork.Products.GetAvailableProductsWithDetailsAsync();
+        var products = ProductMapping.MapFromDetailsList(assetsWithDetails).ToList();
         
         _logger.LogInformation("Found {Count} available products", products.Count);
         return products;
@@ -44,15 +36,15 @@ public class ProductService : IProductService
     {
         _logger.LogInformation("Getting product with ID: {ProductId}", id);
         
-        var asset = await _unitOfWork.Products.GetByIdAsync((uint)id);
+        var details = await _unitOfWork.Products.GetProductWithDetailsAsync((uint)id);
         
-        if (asset == null)
+        if (details == null)
         {
             _logger.LogWarning("Product not found: {ProductId}", id);
             throw new NotFoundException("Product", id);
         }
         
-        return await MapAssetToDtoAsync(asset);
+        return ProductMapping.MapFromDetails(details);
     }
 
     // === ПАГИНАЦИЯ И ФИЛЬТРАЦИЯ ===
@@ -66,16 +58,11 @@ public class ProductService : IProductService
             "Getting paged products: Page={Page}, Size={Size}, Category={Category}, Search={Search}",
             pageNumber, pageSize, categoryId, searchTerm);
 
-        var (assets, totalCount) = await _unitOfWork.Products.GetProductsPagedAsync(
+        var (assetsWithDetails, totalCount) = await _unitOfWork.Products.GetProductsPagedWithDetailsAsync(
             pageNumber, pageSize, categoryId, manufacturerId, null, searchTerm,
             minPrice, maxPrice, availableOnly: true);
 
-        var products = new List<ProductDto>();
-        foreach (var asset in assets)
-        {
-            products.Add(await MapAssetToDtoAsync(asset));
-        }
-
+        var products = ProductMapping.MapFromDetailsList(assetsWithDetails).ToList();
         return (products, totalCount);
     }
 
@@ -83,30 +70,16 @@ public class ProductService : IProductService
     {
         _logger.LogInformation("Getting products by category: {CategoryId}", categoryId);
         
-        var assets = await _unitOfWork.Products.GetByCategoryAsync(categoryId);
-        
-        var products = new List<ProductDto>();
-        foreach (var asset in assets)
-        {
-            products.Add(await MapAssetToDtoAsync(asset));
-        }
-        
-        return products;
+        var assetsWithDetails = await _unitOfWork.Products.GetByCategoryWithDetailsAsync(categoryId);
+        return ProductMapping.MapFromDetailsList(assetsWithDetails).ToList();
     }
 
     public async Task<IEnumerable<ProductDto>> GetProductsByManufacturerAsync(int manufacturerId)
     {
         _logger.LogInformation("Getting products by manufacturer: {ManufacturerId}", manufacturerId);
         
-        var assets = await _unitOfWork.Products.GetByManufacturerAsync(manufacturerId);
-        
-        var products = new List<ProductDto>();
-        foreach (var asset in assets)
-        {
-            products.Add(await MapAssetToDtoAsync(asset));
-        }
-        
-        return products;
+        var assetsWithDetails = await _unitOfWork.Products.GetByManufacturerWithDetailsAsync(manufacturerId);
+        return ProductMapping.MapFromDetailsList(assetsWithDetails).ToList();
     }
 
     public async Task<IEnumerable<ProductDto>> SearchProductsAsync(string searchTerm)
@@ -118,15 +91,8 @@ public class ProductService : IProductService
             throw new BadRequestException("Search term cannot be empty");
         }
         
-        var assets = await _unitOfWork.Products.SearchProductsAsync(searchTerm);
-        
-        var products = new List<ProductDto>();
-        foreach (var asset in assets)
-        {
-            products.Add(await MapAssetToDtoAsync(asset));
-        }
-        
-        return products;
+        var assetsWithDetails = await _unitOfWork.Products.SearchProductsWithDetailsAsync(searchTerm);
+        return ProductMapping.MapFromDetailsList(assetsWithDetails).ToList();
     }
 
     // === АКСЕССУАРЫ ===
@@ -137,11 +103,7 @@ public class ProductService : IProductService
         
         var accessories = await _unitOfWork.Accessories.GetAvailableAccessoriesAsync();
         
-        var dtos = new List<AccessoryDto>();
-        foreach (var accessory in accessories)
-        {
-            dtos.Add(await MapAccessoryToDtoAsync(accessory));
-        }
+        var dtos = accessories.Select(ProductMapping.MapAccessoryToDto).ToList();
         
         _logger.LogInformation("Found {Count} available accessories", dtos.Count);
         return dtos;
@@ -159,7 +121,7 @@ public class ProductService : IProductService
             throw new NotFoundException("Accessory", id);
         }
         
-        return await MapAccessoryToDtoAsync(accessory);
+        return ProductMapping.MapAccessoryToDto(accessory);
     }
 
     public async Task<(IEnumerable<AccessoryDto> Accessories, int TotalCount)> GetAccessoriesPagedAsync(
@@ -172,12 +134,7 @@ public class ProductService : IProductService
         var (accessories, totalCount) = await _unitOfWork.Accessories.GetAccessoriesPagedAsync(
             pageNumber, pageSize, categoryId, null, searchTerm, availableOnly: true);
 
-        var dtos = new List<AccessoryDto>();
-        foreach (var accessory in accessories)
-        {
-            dtos.Add(await MapAccessoryToDtoAsync(accessory));
-        }
-
+        var dtos = accessories.Select(ProductMapping.MapAccessoryToDto).ToList();
         return (dtos, totalCount);
     }
 
@@ -191,19 +148,6 @@ public class ProductService : IProductService
     public async Task<bool> IsAccessoryAvailableAsync(int accessoryId, int requestedQuantity = 1)
     {
         return await _unitOfWork.Accessories.IsAvailableAsync((uint)accessoryId, requestedQuantity);
-    }
-
-    // === МАППИНГ (PRIVATE МЕТОДЫ) ===
-    // Используем централизованный Mapping слой
-
-    private Task<ProductDto> MapAssetToDtoAsync(Asset asset)
-    {
-        return Task.FromResult(ProductMapping.MapAssetToDto(asset));
-    }
-
-    private Task<AccessoryDto> MapAccessoryToDtoAsync(Accessory accessory)
-    {
-        return Task.FromResult(ProductMapping.MapAccessoryToDto(accessory));
     }
 }
 

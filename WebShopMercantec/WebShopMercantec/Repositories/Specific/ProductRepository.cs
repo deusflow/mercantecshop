@@ -272,4 +272,152 @@ public class ProductRepository : Repository<Asset>, IProductRepository
                 a.NextAuditDate <= today)
             .ToListAsync();
     }
+
+    // === МЕТОДЫ С ЗАГРУЗКОЙ СВЯЗЕЙ ===
+
+    /// <summary>
+    /// Внутренний helper: собирает projection для одного Asset
+    /// Использует sub-queries вместо navigation properties (scaffolded модели их не имеют)
+    /// </summary>
+    private IQueryable<AssetWithDetails> ProjectWithDetails(IQueryable<Asset> query)
+    {
+        return query.Select(a => new AssetWithDetails(
+            a,
+            _context.Models.AsNoTracking().FirstOrDefault(m => m.Id == (uint?)a.ModelId),
+            _context.Models.AsNoTracking()
+                .Where(m => m.Id == (uint?)a.ModelId && m.CategoryId != null)
+                .SelectMany(m => _context.Categories.AsNoTracking().Where(c => c.Id == (uint)m.CategoryId!.Value))
+                .FirstOrDefault(),
+            _context.Models.AsNoTracking()
+                .Where(m => m.Id == (uint?)a.ModelId && m.ManufacturerId != null)
+                .SelectMany(m => _context.Manufacturers.AsNoTracking().Where(mfr => mfr.Id == (uint)m.ManufacturerId!.Value))
+                .FirstOrDefault(),
+            a.StatusId != null
+                ? _context.StatusLabels.AsNoTracking().FirstOrDefault(s => s.Id == (uint)a.StatusId!.Value)
+                : null,
+            a.LocationId != null
+                ? _context.Locations.AsNoTracking().FirstOrDefault(l => l.Id == (uint)a.LocationId!.Value)
+                : null,
+            a.SupplierId != null
+                ? _context.Suppliers.AsNoTracking().FirstOrDefault(s => s.Id == (uint)a.SupplierId!.Value)
+                : null
+        ));
+    }
+
+    public async Task<AssetWithDetails?> GetProductWithDetailsAsync(uint id)
+    {
+        var query = _dbSet.AsNoTracking().Where(a => a.Id == id && a.DeletedAt == null);
+        return await ProjectWithDetails(query).FirstOrDefaultAsync();
+    }
+
+    public async Task<IEnumerable<AssetWithDetails>> GetAvailableProductsWithDetailsAsync()
+    {
+        var query = _dbSet.AsNoTracking()
+            .Where(a =>
+                (a.StatusId == 1 || a.StatusId == 2) &&
+                (a.Archived == false || a.Archived == null) &&
+                a.DeletedAt == null &&
+                a.Requestable == 1 &&
+                a.AssignedTo == null)
+            .OrderBy(a => a.Name);
+
+        return await ProjectWithDetails(query).ToListAsync();
+    }
+
+    public async Task<(IEnumerable<AssetWithDetails> Products, int TotalCount)> GetProductsPagedWithDetailsAsync(
+        int pageNumber,
+        int pageSize,
+        int? categoryId = null,
+        int? manufacturerId = null,
+        int? statusId = null,
+        string? searchTerm = null,
+        decimal? minPrice = null,
+        decimal? maxPrice = null,
+        bool? availableOnly = true)
+    {
+        var query = _dbSet.AsNoTracking().Where(a => a.DeletedAt == null);
+
+        if (availableOnly == true)
+        {
+            query = query.Where(a =>
+                (a.StatusId == 1 || a.StatusId == 2) &&
+                (a.Archived == false || a.Archived == null) &&
+                a.Requestable == 1 &&
+                a.AssignedTo == null);
+        }
+
+        if (categoryId.HasValue)
+        {
+            query = query.Where(a =>
+                a.ModelId.HasValue &&
+                _context.Models.Any(m => m.Id == a.ModelId && m.CategoryId == categoryId));
+        }
+
+        if (manufacturerId.HasValue)
+        {
+            query = query.Where(a =>
+                a.ModelId.HasValue &&
+                _context.Models.Any(m => m.Id == a.ModelId && m.ManufacturerId == manufacturerId));
+        }
+
+        if (statusId.HasValue)
+            query = query.Where(a => a.StatusId == statusId);
+
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            var term = searchTerm.ToLower();
+            query = query.Where(a =>
+                (a.Name != null && a.Name.ToLower().Contains(term)) ||
+                (a.AssetTag != null && a.AssetTag.ToLower().Contains(term)) ||
+                (a.Serial != null && a.Serial.ToLower().Contains(term)));
+        }
+
+        if (minPrice.HasValue)
+            query = query.Where(a => a.PurchaseCost >= minPrice.Value);
+        if (maxPrice.HasValue)
+            query = query.Where(a => a.PurchaseCost <= maxPrice.Value);
+
+        var totalCount = await query.CountAsync();
+
+        var orderedQuery = query.OrderBy(a => a.Name).ThenBy(a => a.Id)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize);
+
+        var products = await ProjectWithDetails(orderedQuery).ToListAsync();
+        return (products, totalCount);
+    }
+
+    public async Task<IEnumerable<AssetWithDetails>> SearchProductsWithDetailsAsync(string searchTerm)
+    {
+        var term = searchTerm.ToLower();
+        var query = _dbSet.AsNoTracking()
+            .Where(a => a.DeletedAt == null && (
+                (a.Name != null && a.Name.ToLower().Contains(term)) ||
+                (a.AssetTag != null && a.AssetTag.ToLower().Contains(term)) ||
+                (a.Serial != null && a.Serial.ToLower().Contains(term))));
+
+        return await ProjectWithDetails(query).ToListAsync();
+    }
+
+    public async Task<IEnumerable<AssetWithDetails>> GetByCategoryWithDetailsAsync(int categoryId)
+    {
+        var query = _dbSet.AsNoTracking()
+            .Where(a =>
+                a.ModelId.HasValue &&
+                _context.Models.Any(m => m.Id == a.ModelId && m.CategoryId == categoryId) &&
+                a.DeletedAt == null);
+
+        return await ProjectWithDetails(query).ToListAsync();
+    }
+
+    public async Task<IEnumerable<AssetWithDetails>> GetByManufacturerWithDetailsAsync(int manufacturerId)
+    {
+        var query = _dbSet.AsNoTracking()
+            .Where(a =>
+                a.ModelId.HasValue &&
+                _context.Models.Any(m => m.Id == a.ModelId && m.ManufacturerId == manufacturerId) &&
+                a.DeletedAt == null);
+
+        return await ProjectWithDetails(query).ToListAsync();
+    }
 }

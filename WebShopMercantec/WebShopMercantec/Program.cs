@@ -2,14 +2,13 @@ using Microsoft.EntityFrameworkCore;
 using WebShopMercantec.Client.Pages;
 using WebShopMercantec.Components;
 using WebShopMercantec.Models;
-using System.IO;
 using WebShopMercantec.Services;
 using WebShopMercantec.Repositories;
 using WebShopMercantec.Repositories.Specific;
 using WebShopMercantec.Middleware;
+using WebShopMercantec.Configuration;
 using Serilog;
 using FluentValidation;
-
 
 
 namespace WebShopMercantec;
@@ -18,18 +17,8 @@ public class Program
     public static void Main(string[] args)
     {
         // === НАСТРОЙКА SERILOG ===
-        // Конфигурируем Serilog ДО создания builder
-        Log.Logger = new LoggerConfiguration()
-            .MinimumLevel.Information()
-            .MinimumLevel.Override("Microsoft", Serilog.Events.LogEventLevel.Warning)
-            .MinimumLevel.Override("Microsoft.EntityFrameworkCore", Serilog.Events.LogEventLevel.Warning)
-            .Enrich.FromLogContext()
-            .WriteTo.Console()
-            .WriteTo.File(
-                "logs/webshop-.txt",
-                rollingInterval: RollingInterval.Day,
-                retainedFileCountLimit: 30)
-            .CreateLogger();
+        // Конфигурируем Serilog ДО создания builder (используем централизованный класс)
+        SerilogConfiguration.ConfigureSerilog();
 
         try
         {
@@ -48,14 +37,41 @@ public class Program
         // Добавляем поддержку контроллеров (для API)
         builder.Services.AddControllers();
         
+        // === CORS ===
+        builder.Services.AddCors(options =>
+        {
+            options.AddPolicy("WebShopPolicy", policy =>
+            {
+                if (builder.Environment.IsDevelopment())
+                {
+                    policy.AllowAnyOrigin()
+                          .AllowAnyHeader()
+                          .AllowAnyMethod();
+                }
+                else
+                {
+                    policy.WithOrigins(
+                              builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() 
+                              ?? new[] { "https://localhost" })
+                          .AllowAnyHeader()
+                          .AllowAnyMethod()
+                          .AllowCredentials();
+                }
+            });
+        });
+        
         //db
         
         // подтягиваю строку подключения 
         var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
-        // Регистрируем контекст 
+        // Регистрируем контекст с retry для стабильности через SSH туннель
         builder.Services.AddDbContext<SnipeItContext>(options =>
-            options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
+            options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString),
+                mysqlOptions => mysqlOptions.EnableRetryOnFailure(
+                    maxRetryCount: 5,
+                    maxRetryDelay: TimeSpan.FromSeconds(10),
+                    errorNumbersToAdd: null)));
         
         // === REPOSITORY PATTERN ===
         // Generic Repository
@@ -89,6 +105,11 @@ public class Program
         builder.Services.AddScoped<ILocationService, LocationService>();
         builder.Services.AddScoped<IStatusLabelService, StatusLabelService>();
         // === END SERVICES ===
+        
+        // === HEALTH CHECKS ===
+        builder.Services.AddHealthChecks()
+            .AddDbContextCheck<SnipeItContext>("database");
+        // === END HEALTH CHECKS ===
         
        //Swaaaaagger maaa boy
         builder.Services.AddEndpointsApiExplorer(); // Нужно для Minimal API
@@ -125,6 +146,8 @@ public class Program
 
         app.UseHttpsRedirection();
 
+        app.UseCors("WebShopPolicy");
+
         app.UseAntiforgery();
 
         app.MapStaticAssets();
@@ -132,18 +155,13 @@ public class Program
         // Регистрируем маршруты для API контроллеров
         app.MapControllers();
         
+        // Health check endpoint (используется docker healthcheck)
+        app.MapHealthChecks("/health");
+        
         app.MapRazorComponents<App>()
             .AddInteractiveServerRenderMode()
             .AddInteractiveWebAssemblyRenderMode()
             .AddAdditionalAssemblies(typeof(Client._Imports).Assembly);
-        
-        // Временный тест: Получить первые 5 ассетов из базы
-        app.MapGet("/test-assets", async (SnipeItContext db) =>
-            {
-                // Берем 5 штук, чтобы не грузить всю базу
-                return await db.Assets.Take(5).ToListAsync();
-            })
-            .WithName("GetAssets");
 
         app.Run();
         }

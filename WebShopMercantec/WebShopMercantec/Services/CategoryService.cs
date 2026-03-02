@@ -23,19 +23,18 @@ public class CategoryService : ICategoryService
 
     /// <summary>
     /// Получить все активные категории с количеством элементов
+    /// Использует batch-запрос для подсчёта (2 SQL вместо N+1)
     /// </summary>
     public async Task<IEnumerable<CategoryDto>> GetAllCategoriesAsync()
     {
         _logger.LogInformation("Getting all categories");
         
         var categories = await _unitOfWork.Categories.GetAllActiveCategoriesAsync();
+        var counts = await _unitOfWork.Categories.GetAllItemsCountsBatchAsync();
         
-        var categoryDtos = new List<CategoryDto>();
-        foreach (var category in categories)
-        {
-            var itemsCount = await _unitOfWork.Categories.GetItemsCountAsync(category.Id);
-            categoryDtos.Add(CategoryMapping.MapToDto(category, itemsCount));
-        }
+        var categoryDtos = categories.Select(c => 
+            CategoryMapping.MapToDto(c, counts.GetValueOrDefault(c.Id, 0))
+        ).ToList();
         
         _logger.LogInformation("Found {Count} categories", categoryDtos.Count);
         return categoryDtos;
@@ -69,15 +68,11 @@ public class CategoryService : ICategoryService
         _logger.LogInformation("Getting categories by type: {CategoryType}", categoryType);
         
         var categories = await _unitOfWork.Categories.GetCategoriesByTypeAsync(categoryType);
+        var counts = await _unitOfWork.Categories.GetAllItemsCountsBatchAsync();
         
-        var categoryDtos = new List<CategoryDto>();
-        foreach (var category in categories)
-        {
-            var itemsCount = await _unitOfWork.Categories.GetItemsCountAsync(category.Id);
-            categoryDtos.Add(CategoryMapping.MapToDto(category, itemsCount));
-        }
-        
-        return categoryDtos;
+        return categories.Select(c => 
+            CategoryMapping.MapToDto(c, counts.GetValueOrDefault(c.Id, 0))
+        ).ToList();
     }
 
     /// <summary>

@@ -27,5 +27,12 @@ public interface ICategoryRepository : IRepository<Category>
     /// Подсчитать количество элементов в категории
     /// </summary>
     Task<int> GetItemsCountAsync(uint categoryId);
+    
+    /// <summary>
+    /// Получить количество элементов для ВСЕХ категорий одним запросом (batch)
+    /// Возвращает Dictionary categoryId → count
+    /// Решает проблему N+1 запросов при вызове GetItemsCountAsync в цикле
+    /// </summary>
+    Task<Dictionary<uint, int>> GetAllItemsCountsBatchAsync();
 }
 

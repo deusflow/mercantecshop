@@ -63,5 +63,11 @@ x64/
 secrets.json
 appsettings.Development.json
 
+# Sensitive files - passwords, DB dumps
+code.txt
+dump.txt
+*.sql
+.env
+
 # Mac / Linux
 .DS_Store

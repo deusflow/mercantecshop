@@ -94,4 +94,46 @@ public interface IProductRepository : IRepository<Asset>
     /// Проверяет warranty, maintenance dates
     /// </summary>
     Task<IEnumerable<Asset>> GetProductsRequiringMaintenanceAsync();
+    
+    // === МЕТОДЫ С ЗАГРУЗКОЙ СВЯЗЕЙ (AssetWithDetails) ===
+    
+    /// <summary>
+    /// Получить продукт по ID со всеми связанными данными
+    /// (Model, Category, Manufacturer, StatusLabel, Location, Supplier)
+    /// </summary>
+    Task<AssetWithDetails?> GetProductWithDetailsAsync(uint id);
+    
+    /// <summary>
+    /// Получить доступные продукты со связанными данными
+    /// </summary>
+    Task<IEnumerable<AssetWithDetails>> GetAvailableProductsWithDetailsAsync();
+    
+    /// <summary>
+    /// Получить продукты с пагинацией, фильтрами и связанными данными
+    /// </summary>
+    Task<(IEnumerable<AssetWithDetails> Products, int TotalCount)> GetProductsPagedWithDetailsAsync(
+        int pageNumber,
+        int pageSize,
+        int? categoryId = null,
+        int? manufacturerId = null,
+        int? statusId = null,
+        string? searchTerm = null,
+        decimal? minPrice = null,
+        decimal? maxPrice = null,
+        bool? availableOnly = true);
+    
+    /// <summary>
+    /// Поиск продуктов со связанными данными
+    /// </summary>
+    Task<IEnumerable<AssetWithDetails>> SearchProductsWithDetailsAsync(string searchTerm);
+    
+    /// <summary>
+    /// Получить продукты по категории со связанными данными
+    /// </summary>
+    Task<IEnumerable<AssetWithDetails>> GetByCategoryWithDetailsAsync(int categoryId);
+    
+    /// <summary>
+    /// Получить продукты по производителю со связанными данными
+    /// </summary>
+    Task<IEnumerable<AssetWithDetails>> GetByManufacturerWithDetailsAsync(int manufacturerId);
 }
