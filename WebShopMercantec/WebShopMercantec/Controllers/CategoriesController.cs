@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using WebShopMercantec.Shared.DTOs;
 using WebShopMercantec.Services;
@@ -52,9 +53,9 @@ public class CategoriesController : ControllerBase
 
     /// <summary>
     /// Создать новую категорию
-    /// Пример POST endpoint с валидацией через FluentValidation
     /// </summary>
     [HttpPost]
+    [Authorize(Roles = "Admin")]
     public async Task<ActionResult<CategoryDto>> Create([FromBody] CategoryDto categoryDto)
     {
         // Валидация входных данных
@@ -72,6 +73,7 @@ public class CategoriesController : ControllerBase
     /// Обновить категорию
     /// </summary>
     [HttpPut("{id}")]
+    [Authorize(Roles = "Admin")]
     public async Task<ActionResult<CategoryDto>> Update(int id, [FromBody] CategoryDto categoryDto)
     {
         // Валидация входных данных
@@ -89,6 +91,7 @@ public class CategoriesController : ControllerBase
     /// Удалить категорию (soft delete)
     /// </summary>
     [HttpDelete("{id}")]
+    [Authorize(Roles = "Admin")]
     public async Task<ActionResult> Delete(int id)
     {
         await _categoryService.DeleteCategoryAsync(id);

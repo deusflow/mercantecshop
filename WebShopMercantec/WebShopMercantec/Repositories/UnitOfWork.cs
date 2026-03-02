@@ -53,6 +53,11 @@ public class UnitOfWork : IUnitOfWork
     public ILocationRepository Locations { get; }
     public IStatusLabelRepository StatusLabels { get; }
 
+    /// <summary>
+    /// Direct context access for WebShop-specific DbSets
+    /// </summary>
+    public SnipeItContext Context => _context;
+
     // === МЕТОДЫ УПРАВЛЕНИЯ ===
 
     /// <summary>

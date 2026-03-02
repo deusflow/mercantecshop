@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using WebShopMercantec.Client.Pages;
 using WebShopMercantec.Components;
 using WebShopMercantec.Models;
 using WebShopMercantec.Services;
@@ -9,6 +8,9 @@ using WebShopMercantec.Middleware;
 using WebShopMercantec.Configuration;
 using Serilog;
 using FluentValidation;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 
 namespace WebShopMercantec;
@@ -61,9 +63,15 @@ public class Program
         });
         
         //db
-        
-        // подтягиваю строку подключения 
+        // Получаем строку подключения — падаем сразу с понятным сообщением если пусто
         var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            throw new InvalidOperationException(
+                "ConnectionStrings:DefaultConnection is empty. " +
+                "Set it in appsettings.Development.json or via environment variable " +
+                "ConnectionStrings__DefaultConnection.");
+        }
 
         // Регистрируем контекст с retry для стабильности через SSH туннель
         builder.Services.AddDbContext<SnipeItContext>(options =>
@@ -104,23 +112,71 @@ public class Program
         builder.Services.AddScoped<ISupplierService, SupplierService>();
         builder.Services.AddScoped<ILocationService, LocationService>();
         builder.Services.AddScoped<IStatusLabelService, StatusLabelService>();
+        builder.Services.AddScoped<IAuthService, AuthService>();
+        builder.Services.AddScoped<ITokenService, TokenService>();
+        builder.Services.AddScoped<IUserService, UserService>();
+        builder.Services.AddScoped<ICreditService, CreditService>();
+        builder.Services.AddScoped<IOrderService, OrderService>();
         // === END SERVICES ===
+
+        // === JWT AUTHENTICATION ===
+        var jwtSettings = builder.Configuration
+            .GetSection(JwtSettings.SectionName)
+            .Get<JwtSettings>() ?? new JwtSettings();
+
+        if (string.IsNullOrWhiteSpace(jwtSettings.Key))
+        {
+            throw new InvalidOperationException(
+                "Jwt:Key is empty. Set it in appsettings.Development.json or via " +
+                "environment variable Jwt__Key. Minimum 32 characters required.");
+        }
+
+        if (jwtSettings.Key.Length < 32)
+        {
+            throw new InvalidOperationException(
+                $"Jwt:Key is too short ({jwtSettings.Key.Length} chars). Minimum 32 characters required.");
+        }
+
+        // Register as singleton so TokenService can inject it directly
+        builder.Services.AddSingleton(jwtSettings);
+
+        builder.Services.AddAuthentication(options =>
+        {
+            options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+        })
+        .AddJwtBearer(options =>
+        {
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidIssuer = jwtSettings.Issuer,
+                ValidateAudience = true,
+                ValidAudience = jwtSettings.Audience,
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = new SymmetricSecurityKey(
+                    Encoding.UTF8.GetBytes(jwtSettings.Key)),
+                ValidateLifetime = true,
+                ClockSkew = TimeSpan.Zero
+            };
+        });
+
+        builder.Services.AddAuthorization();
+        // === END JWT ===
         
         // === HEALTH CHECKS ===
         builder.Services.AddHealthChecks()
             .AddDbContextCheck<SnipeItContext>("database");
         // === END HEALTH CHECKS ===
         
-       //Swaaaaagger maaa boy
-        builder.Services.AddEndpointsApiExplorer(); // Нужно для Minimal API
+       //Swagger с поддержкой JWT авторизации
+        builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen(options =>
         {
             var xmlFile = "WebShopMercantec.xml";
             var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
             if (File.Exists(xmlPath))
-            {
                 options.IncludeXmlComments(xmlPath);
-            }
         });
 
         var app = builder.Build();
@@ -147,6 +203,10 @@ public class Program
         app.UseHttpsRedirection();
 
         app.UseCors("WebShopPolicy");
+
+        // JWT Authentication + Role-based Authorization
+        app.UseAuthentication();
+        app.UseAuthorization();
 
         app.UseAntiforgery();
 
