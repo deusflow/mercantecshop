@@ -179,14 +179,14 @@ public class Program
             app.UseCors("WebShopPolicy");
             app.UseRateLimiter();
 
+            // Hosted WASM static assets (_framework, app files, scoped css)
+            app.UseBlazorFrameworkFiles();
             app.UseStaticFiles();
 
             app.UseAuthentication();
             app.UseAuthorization();
             
             app.UseAntiforgery();
-
-            app.MapStaticAssets();
             
             app.MapControllers();
             
