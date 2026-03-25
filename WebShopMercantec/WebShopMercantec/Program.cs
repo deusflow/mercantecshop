@@ -8,7 +8,9 @@ using WebShopMercantec.Middleware;
 using WebShopMercantec.Configuration;
 using Serilog;
 using FluentValidation;
+using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 
@@ -103,7 +105,21 @@ public class Program
         // === FLUENT VALIDATION ===
         // Автоматическая регистрация всех валидаторов из сборки
         builder.Services.AddValidatorsFromAssemblyContaining<Program>();
+        builder.Services.AddFluentValidationAutoValidation();
         // === END VALIDATION ===
+
+        // === RATE LIMITING ===
+        builder.Services.AddRateLimiter(options =>
+        {
+            options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+            options.AddFixedWindowLimiter("auth", limiterOptions =>
+            {
+                limiterOptions.PermitLimit = 5;
+                limiterOptions.Window = TimeSpan.FromMinutes(1);
+                limiterOptions.QueueLimit = 0;
+            });
+        });
+        // === END RATE LIMITING ===
         
         // === SERVICES ===
         builder.Services.AddScoped<IProductService, ProductService>();
@@ -203,6 +219,8 @@ public class Program
         app.UseHttpsRedirection();
 
         app.UseCors("WebShopPolicy");
+
+        app.UseRateLimiter();
 
         // JWT Authentication + Role-based Authorization
         app.UseAuthentication();

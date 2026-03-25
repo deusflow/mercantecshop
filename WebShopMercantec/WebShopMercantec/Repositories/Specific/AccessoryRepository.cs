@@ -81,14 +81,14 @@ public class AccessoryRepository : Repository<Accessory>, IAccessoryRepository
     /// </summary>
     public async Task<IEnumerable<Accessory>> SearchAccessoriesAsync(string searchTerm)
     {
-        var term = searchTerm.ToLower();
+        var term = $"%{searchTerm.Trim()}%";
         
         return await _dbSet
             .AsNoTracking()
             .Where(a => a.DeletedAt == null && (
-                (a.Name != null && a.Name.ToLower().Contains(term)) ||
-                (a.ModelNumber != null && a.ModelNumber.ToLower().Contains(term)) ||
-                (a.OrderNumber != null && a.OrderNumber.ToLower().Contains(term))
+                (a.Name != null && EF.Functions.Like(a.Name, term)) ||
+                (a.ModelNumber != null && EF.Functions.Like(a.ModelNumber, term)) ||
+                (a.OrderNumber != null && EF.Functions.Like(a.OrderNumber, term))
             ))
             .ToListAsync();
     }
@@ -129,11 +129,11 @@ public class AccessoryRepository : Repository<Accessory>, IAccessoryRepository
         // Фильтр по поиску
         if (!string.IsNullOrWhiteSpace(searchTerm))
         {
-            var term = searchTerm.ToLower();
+            var term = $"%{searchTerm.Trim()}%";
             query = query.Where(a =>
-                (a.Name != null && a.Name.ToLower().Contains(term)) ||
-                (a.ModelNumber != null && a.ModelNumber.ToLower().Contains(term)) ||
-                (a.OrderNumber != null && a.OrderNumber.ToLower().Contains(term))
+                (a.Name != null && EF.Functions.Like(a.Name, term)) ||
+                (a.ModelNumber != null && EF.Functions.Like(a.ModelNumber, term)) ||
+                (a.OrderNumber != null && EF.Functions.Like(a.OrderNumber, term))
             );
         }
         
@@ -342,10 +342,10 @@ public class AccessoryRepository : Repository<Accessory>, IAccessoryRepository
 
         if (!string.IsNullOrWhiteSpace(searchTerm))
         {
-            var search = searchTerm.ToLower();
+            var search = $"%{searchTerm.Trim()}%";
             query = query.Where(x => 
-                (x.accessory.Name != null && x.accessory.Name.ToLower().Contains(search)) ||
-                (x.accessory.ModelNumber != null && x.accessory.ModelNumber.ToLower().Contains(search)));
+                (x.accessory.Name != null && EF.Functions.Like(x.accessory.Name, search)) ||
+                (x.accessory.ModelNumber != null && EF.Functions.Like(x.accessory.ModelNumber, search)));
         }
 
         // Подсчет общего количества

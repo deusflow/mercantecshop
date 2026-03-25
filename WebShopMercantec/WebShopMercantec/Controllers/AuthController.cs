@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using WebShopMercantec.Extensions;
 using WebShopMercantec.Services;
 using WebShopMercantec.Shared.DTOs;
@@ -29,6 +30,7 @@ public class AuthController : ControllerBase
     /// <summary>Login and receive JWT access + refresh token</summary>
     [HttpPost("login")]
     [AllowAnonymous]
+    [EnableRateLimiting("auth")]
     public async Task<ActionResult<AuthResponseDto>> Login([FromBody] LoginDto dto)
     {
         var result = await _authService.LoginAsync(dto);
@@ -38,6 +40,7 @@ public class AuthController : ControllerBase
     /// <summary>Register a new user account</summary>
     [HttpPost("register")]
     [AllowAnonymous]
+    [EnableRateLimiting("auth")]
     public async Task<ActionResult<AuthResponseDto>> Register([FromBody] RegisterDto dto)
     {
         if (dto.Password != dto.ConfirmPassword)
@@ -50,6 +53,7 @@ public class AuthController : ControllerBase
     /// <summary>Refresh access token using refresh token</summary>
     [HttpPost("refresh")]
     [AllowAnonymous]
+    [EnableRateLimiting("auth")]
     public async Task<ActionResult<AuthResponseDto>> Refresh([FromBody] RefreshTokenDto dto)
     {
         var result = await _authService.RefreshTokenAsync(dto.RefreshToken);
@@ -61,7 +65,8 @@ public class AuthController : ControllerBase
     [Authorize]
     public async Task<ActionResult> Logout([FromBody] RefreshTokenDto dto)
     {
-        await _authService.RevokeTokenAsync(dto.RefreshToken);
+        var userId = User.GetUserId();
+        await _authService.RevokeTokenAsync(userId, dto.RefreshToken);
         return NoContent();
     }
 

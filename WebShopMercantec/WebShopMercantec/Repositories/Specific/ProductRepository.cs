@@ -42,11 +42,15 @@ public class ProductRepository : Repository<Asset>, IProductRepository
     /// </summary>
     public async Task<IEnumerable<Asset>> GetByCategoryAsync(int categoryId)
     {
+        var modelIds = await GetModelIdsByCategoryAsync(categoryId);
+        if (modelIds.Count == 0)
+            return [];
+
         return await _dbSet
             .AsNoTracking()
             .Where(a => 
                 a.ModelId.HasValue &&
-                _context.Models.Any(m => m.Id == a.ModelId && m.CategoryId == categoryId) &&
+                modelIds.Contains(a.ModelId) &&
                 a.DeletedAt == null)
             .ToListAsync();
     }
@@ -68,11 +72,15 @@ public class ProductRepository : Repository<Asset>, IProductRepository
     /// </summary>
     public async Task<IEnumerable<Asset>> GetByManufacturerAsync(int manufacturerId)
     {
+        var modelIds = await GetModelIdsByManufacturerAsync(manufacturerId);
+        if (modelIds.Count == 0)
+            return [];
+
         return await _dbSet
             .AsNoTracking()
             .Where(a => 
                 a.ModelId.HasValue &&
-                _context.Models.Any(m => m.Id == a.ModelId && m.ManufacturerId == manufacturerId) &&
+                modelIds.Contains(a.ModelId) &&
                 a.DeletedAt == null)
             .ToListAsync();
     }
@@ -118,14 +126,14 @@ public class ProductRepository : Repository<Asset>, IProductRepository
     /// </summary>
     public async Task<IEnumerable<Asset>> SearchProductsAsync(string searchTerm)
     {
-        var term = searchTerm.ToLower();
+        var term = $"%{searchTerm.Trim()}%";
         
         return await _dbSet
             .AsNoTracking()
             .Where(a => a.DeletedAt == null && (
-                (a.Name != null && a.Name.ToLower().Contains(term)) ||
-                (a.AssetTag != null && a.AssetTag.ToLower().Contains(term)) ||
-                (a.Serial != null && a.Serial.ToLower().Contains(term))
+                (a.Name != null && EF.Functions.Like(a.Name, term)) ||
+                (a.AssetTag != null && EF.Functions.Like(a.AssetTag, term)) ||
+                (a.Serial != null && EF.Functions.Like(a.Serial, term))
             ))
             .ToListAsync();
     }
@@ -161,17 +169,25 @@ public class ProductRepository : Repository<Asset>, IProductRepository
         // Фильтр по категории (через Model)
         if (categoryId.HasValue)
         {
+            var modelIds = await GetModelIdsByCategoryAsync(categoryId.Value);
+            if (modelIds.Count == 0)
+                return ([], 0);
+
             query = query.Where(a =>
                 a.ModelId.HasValue &&
-                _context.Models.Any(m => m.Id == a.ModelId && m.CategoryId == categoryId));
+                modelIds.Contains(a.ModelId));
         }
         
         // Фильтр по производителю (через Model)
         if (manufacturerId.HasValue)
         {
+            var modelIds = await GetModelIdsByManufacturerAsync(manufacturerId.Value);
+            if (modelIds.Count == 0)
+                return ([], 0);
+
             query = query.Where(a =>
                 a.ModelId.HasValue &&
-                _context.Models.Any(m => m.Id == a.ModelId && m.ManufacturerId == manufacturerId));
+                modelIds.Contains(a.ModelId));
         }
         
         // Фильтр по статусу
@@ -183,11 +199,11 @@ public class ProductRepository : Repository<Asset>, IProductRepository
         // Фильтр по поиску
         if (!string.IsNullOrWhiteSpace(searchTerm))
         {
-            var term = searchTerm.ToLower();
+            var term = $"%{searchTerm.Trim()}%";
             query = query.Where(a =>
-                (a.Name != null && a.Name.ToLower().Contains(term)) ||
-                (a.AssetTag != null && a.AssetTag.ToLower().Contains(term)) ||
-                (a.Serial != null && a.Serial.ToLower().Contains(term))
+                (a.Name != null && EF.Functions.Like(a.Name, term)) ||
+                (a.AssetTag != null && EF.Functions.Like(a.AssetTag, term)) ||
+                (a.Serial != null && EF.Functions.Like(a.Serial, term))
             );
         }
         
@@ -237,11 +253,13 @@ public class ProductRepository : Repository<Asset>, IProductRepository
     /// </summary>
     public async Task<Asset?> GetByAssetTagAsync(string assetTag)
     {
+        var normalizedTag = assetTag.Trim();
+
         return await _dbSet
             .AsNoTracking()
             .FirstOrDefaultAsync(a => 
                 a.AssetTag != null && 
-                a.AssetTag.ToLower() == assetTag.ToLower() &&
+                a.AssetTag == normalizedTag &&
                 a.DeletedAt == null);
     }
 
@@ -276,52 +294,142 @@ public class ProductRepository : Repository<Asset>, IProductRepository
     // === МЕТОДЫ С ЗАГРУЗКОЙ СВЯЗЕЙ ===
 
     /// <summary>
-    /// Внутренний helper: собирает projection для одного Asset
-    /// Использует sub-queries вместо navigation properties (scaffolded модели их не имеют)
+    /// MariaDB-safe composition: грузим base assets и связанные сущности отдельными запросами,
+    /// затем склеиваем в памяти без SQL APPLY/JOIN-конструкций.
     /// </summary>
-    private IQueryable<AssetWithDetails> ProjectWithDetails(IQueryable<Asset> query)
+    private async Task<List<AssetWithDetails>> ComposeAssetsWithDetailsAsync(List<Asset> assets)
     {
-        return query.Select(a => new AssetWithDetails(
-            a,
-            _context.Models.AsNoTracking().FirstOrDefault(m => m.Id == (uint?)a.ModelId),
-            _context.Models.AsNoTracking()
-                .Where(m => m.Id == (uint?)a.ModelId && m.CategoryId != null)
-                .SelectMany(m => _context.Categories.AsNoTracking().Where(c => c.Id == (uint)m.CategoryId!.Value))
-                .FirstOrDefault(),
-            _context.Models.AsNoTracking()
-                .Where(m => m.Id == (uint?)a.ModelId && m.ManufacturerId != null)
-                .SelectMany(m => _context.Manufacturers.AsNoTracking().Where(mfr => mfr.Id == (uint)m.ManufacturerId!.Value))
-                .FirstOrDefault(),
-            a.StatusId != null
-                ? _context.StatusLabels.AsNoTracking().FirstOrDefault(s => s.Id == (uint)a.StatusId!.Value)
-                : null,
-            a.LocationId != null
-                ? _context.Locations.AsNoTracking().FirstOrDefault(l => l.Id == (uint)a.LocationId!.Value)
-                : null,
-            a.SupplierId != null
-                ? _context.Suppliers.AsNoTracking().FirstOrDefault(s => s.Id == (uint)a.SupplierId!.Value)
-                : null
-        ));
+        if (assets.Count == 0)
+            return [];
+
+        var modelIds = assets
+            .Where(a => a.ModelId.HasValue)
+            .Select(a => (uint)a.ModelId!.Value)
+            .Distinct()
+            .ToList();
+
+        var statusIds = assets
+            .Where(a => a.StatusId.HasValue)
+            .Select(a => (uint)a.StatusId!.Value)
+            .Distinct()
+            .ToList();
+
+        var locationIds = assets
+            .Where(a => a.LocationId.HasValue)
+            .Select(a => (uint)a.LocationId!.Value)
+            .Distinct()
+            .ToList();
+
+        var supplierIds = assets
+            .Where(a => a.SupplierId.HasValue)
+            .Select(a => (uint)a.SupplierId!.Value)
+            .Distinct()
+            .ToList();
+
+        var models = modelIds.Count == 0
+            ? []
+            : await _context.Models.AsNoTracking().Where(m => modelIds.Contains(m.Id)).ToListAsync();
+
+        var categoryIds = models
+            .Where(m => m.CategoryId.HasValue)
+            .Select(m => (uint)m.CategoryId!.Value)
+            .Distinct()
+            .ToList();
+
+        var manufacturerIds = models
+            .Where(m => m.ManufacturerId.HasValue)
+            .Select(m => (uint)m.ManufacturerId!.Value)
+            .Distinct()
+            .ToList();
+
+        var categories = categoryIds.Count == 0
+            ? []
+            : await _context.Categories.AsNoTracking().Where(c => categoryIds.Contains(c.Id)).ToListAsync();
+
+        var manufacturers = manufacturerIds.Count == 0
+            ? []
+            : await _context.Manufacturers.AsNoTracking().Where(m => manufacturerIds.Contains(m.Id)).ToListAsync();
+
+        var statusLabels = statusIds.Count == 0
+            ? []
+            : await _context.StatusLabels.AsNoTracking().Where(s => statusIds.Contains(s.Id)).ToListAsync();
+
+        var locations = locationIds.Count == 0
+            ? []
+            : await _context.Locations.AsNoTracking().Where(l => locationIds.Contains(l.Id)).ToListAsync();
+
+        var suppliers = supplierIds.Count == 0
+            ? []
+            : await _context.Suppliers.AsNoTracking().Where(s => supplierIds.Contains(s.Id)).ToListAsync();
+
+        var modelById = models.ToDictionary(m => m.Id);
+        var categoryById = categories.ToDictionary(c => c.Id);
+        var manufacturerById = manufacturers.ToDictionary(m => m.Id);
+        var statusById = statusLabels.ToDictionary(s => s.Id);
+        var locationById = locations.ToDictionary(l => l.Id);
+        var supplierById = suppliers.ToDictionary(s => s.Id);
+
+        var result = new List<AssetWithDetails>(assets.Count);
+
+        foreach (var asset in assets)
+        {
+            Model? model = null;
+            Category? category = null;
+            Manufacturer? manufacturer = null;
+            StatusLabel? statusLabel = null;
+            Location? location = null;
+            Supplier? supplier = null;
+
+            if (asset.ModelId.HasValue && modelById.TryGetValue((uint)asset.ModelId.Value, out var foundModel))
+            {
+                model = foundModel;
+
+                if (model.CategoryId.HasValue)
+                    categoryById.TryGetValue((uint)model.CategoryId.Value, out category);
+
+                if (model.ManufacturerId.HasValue)
+                    manufacturerById.TryGetValue((uint)model.ManufacturerId.Value, out manufacturer);
+            }
+
+            if (asset.StatusId.HasValue)
+                statusById.TryGetValue((uint)asset.StatusId.Value, out statusLabel);
+
+            if (asset.LocationId.HasValue)
+                locationById.TryGetValue((uint)asset.LocationId.Value, out location);
+
+            if (asset.SupplierId.HasValue)
+                supplierById.TryGetValue((uint)asset.SupplierId.Value, out supplier);
+
+            result.Add(new AssetWithDetails(asset, model, category, manufacturer, statusLabel, location, supplier));
+        }
+
+        return result;
     }
 
     public async Task<AssetWithDetails?> GetProductWithDetailsAsync(uint id)
     {
-        var query = _dbSet.AsNoTracking().Where(a => a.Id == id && a.DeletedAt == null);
-        return await ProjectWithDetails(query).FirstOrDefaultAsync();
+        var asset = await _dbSet.AsNoTracking()
+            .FirstOrDefaultAsync(a => a.Id == id && a.DeletedAt == null);
+
+        if (asset == null)
+            return null;
+
+        var products = await ComposeAssetsWithDetailsAsync([asset]);
+        return products[0];
     }
 
     public async Task<IEnumerable<AssetWithDetails>> GetAvailableProductsWithDetailsAsync()
     {
-        var query = _dbSet.AsNoTracking()
+        var assets = await _dbSet.AsNoTracking()
             .Where(a =>
                 (a.StatusId == 1 || a.StatusId == 2) &&
                 (a.Archived == false || a.Archived == null) &&
                 a.DeletedAt == null &&
                 a.Requestable == 1 &&
                 a.AssignedTo == null)
-            .OrderBy(a => a.Name);
-
-        return await ProjectWithDetails(query).ToListAsync();
+            .OrderBy(a => a.Name)
+            .ToListAsync();
+        return await ComposeAssetsWithDetailsAsync(assets);
     }
 
     public async Task<(IEnumerable<AssetWithDetails> Products, int TotalCount)> GetProductsPagedWithDetailsAsync(
@@ -348,16 +456,24 @@ public class ProductRepository : Repository<Asset>, IProductRepository
 
         if (categoryId.HasValue)
         {
+            var modelIds = await GetModelIdsByCategoryAsync(categoryId.Value);
+            if (modelIds.Count == 0)
+                return ([], 0);
+
             query = query.Where(a =>
                 a.ModelId.HasValue &&
-                _context.Models.Any(m => m.Id == a.ModelId && m.CategoryId == categoryId));
+                modelIds.Contains(a.ModelId));
         }
 
         if (manufacturerId.HasValue)
         {
+            var modelIds = await GetModelIdsByManufacturerAsync(manufacturerId.Value);
+            if (modelIds.Count == 0)
+                return ([], 0);
+
             query = query.Where(a =>
                 a.ModelId.HasValue &&
-                _context.Models.Any(m => m.Id == a.ModelId && m.ManufacturerId == manufacturerId));
+                modelIds.Contains(a.ModelId));
         }
 
         if (statusId.HasValue)
@@ -365,11 +481,11 @@ public class ProductRepository : Repository<Asset>, IProductRepository
 
         if (!string.IsNullOrWhiteSpace(searchTerm))
         {
-            var term = searchTerm.ToLower();
+            var term = $"%{searchTerm.Trim()}%";
             query = query.Where(a =>
-                (a.Name != null && a.Name.ToLower().Contains(term)) ||
-                (a.AssetTag != null && a.AssetTag.ToLower().Contains(term)) ||
-                (a.Serial != null && a.Serial.ToLower().Contains(term)));
+                (a.Name != null && EF.Functions.Like(a.Name, term)) ||
+                (a.AssetTag != null && EF.Functions.Like(a.AssetTag, term)) ||
+                (a.Serial != null && EF.Functions.Like(a.Serial, term)));
         }
 
         if (minPrice.HasValue)
@@ -379,45 +495,79 @@ public class ProductRepository : Repository<Asset>, IProductRepository
 
         var totalCount = await query.CountAsync();
 
-        var orderedQuery = query.OrderBy(a => a.Name).ThenBy(a => a.Id)
+        var assets = await query.OrderBy(a => a.Name).ThenBy(a => a.Id)
             .Skip((pageNumber - 1) * pageSize)
-            .Take(pageSize);
+            .Take(pageSize)
+            .ToListAsync();
 
-        var products = await ProjectWithDetails(orderedQuery).ToListAsync();
+        var products = await ComposeAssetsWithDetailsAsync(assets);
         return (products, totalCount);
     }
 
     public async Task<IEnumerable<AssetWithDetails>> SearchProductsWithDetailsAsync(string searchTerm)
     {
-        var term = searchTerm.ToLower();
-        var query = _dbSet.AsNoTracking()
+        var term = $"%{searchTerm.Trim()}%";
+        var assets = await _dbSet.AsNoTracking()
             .Where(a => a.DeletedAt == null && (
-                (a.Name != null && a.Name.ToLower().Contains(term)) ||
-                (a.AssetTag != null && a.AssetTag.ToLower().Contains(term)) ||
-                (a.Serial != null && a.Serial.ToLower().Contains(term))));
+                (a.Name != null && EF.Functions.Like(a.Name, term)) ||
+                (a.AssetTag != null && EF.Functions.Like(a.AssetTag, term)) ||
+                (a.Serial != null && EF.Functions.Like(a.Serial, term))))
+            .OrderBy(a => a.Name)
+            .ThenBy(a => a.Id)
+            .ToListAsync();
 
-        return await ProjectWithDetails(query).ToListAsync();
+        return await ComposeAssetsWithDetailsAsync(assets);
     }
 
     public async Task<IEnumerable<AssetWithDetails>> GetByCategoryWithDetailsAsync(int categoryId)
     {
-        var query = _dbSet.AsNoTracking()
+        var modelIds = await GetModelIdsByCategoryAsync(categoryId);
+        if (modelIds.Count == 0)
+            return [];
+
+        var assets = await _dbSet.AsNoTracking()
             .Where(a =>
                 a.ModelId.HasValue &&
-                _context.Models.Any(m => m.Id == a.ModelId && m.CategoryId == categoryId) &&
-                a.DeletedAt == null);
+                modelIds.Contains(a.ModelId) &&
+                a.DeletedAt == null)
+            .OrderBy(a => a.Name)
+            .ThenBy(a => a.Id)
+            .ToListAsync();
 
-        return await ProjectWithDetails(query).ToListAsync();
+        return await ComposeAssetsWithDetailsAsync(assets);
     }
 
     public async Task<IEnumerable<AssetWithDetails>> GetByManufacturerWithDetailsAsync(int manufacturerId)
     {
-        var query = _dbSet.AsNoTracking()
+        var modelIds = await GetModelIdsByManufacturerAsync(manufacturerId);
+        if (modelIds.Count == 0)
+            return [];
+
+        var assets = await _dbSet.AsNoTracking()
             .Where(a =>
                 a.ModelId.HasValue &&
-                _context.Models.Any(m => m.Id == a.ModelId && m.ManufacturerId == manufacturerId) &&
-                a.DeletedAt == null);
+                modelIds.Contains(a.ModelId) &&
+                a.DeletedAt == null)
+            .OrderBy(a => a.Name)
+            .ThenBy(a => a.Id)
+            .ToListAsync();
 
-        return await ProjectWithDetails(query).ToListAsync();
+        return await ComposeAssetsWithDetailsAsync(assets);
+    }
+
+    private async Task<List<int?>> GetModelIdsByCategoryAsync(int categoryId)
+    {
+        return await _context.Models.AsNoTracking()
+            .Where(m => m.CategoryId == categoryId)
+            .Select(m => (int?)m.Id)
+            .ToListAsync();
+    }
+
+    private async Task<List<int?>> GetModelIdsByManufacturerAsync(int manufacturerId)
+    {
+        return await _context.Models.AsNoTracking()
+            .Where(m => m.ManufacturerId == manufacturerId)
+            .Select(m => (int?)m.Id)
+            .ToListAsync();
     }
 }

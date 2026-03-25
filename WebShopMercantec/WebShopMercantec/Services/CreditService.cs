@@ -32,7 +32,10 @@ public class CreditService : ICreditService
     {
         if (amount <= 0) throw new BadRequestException("Credit amount must be positive");
 
-        await _unitOfWork.BeginTransactionAsync();
+        var ownsTransaction = _unitOfWork.Context.Database.CurrentTransaction == null;
+        if (ownsTransaction)
+            await _unitOfWork.BeginTransactionAsync();
+
         try
         {
             var credits = await GetOrCreateCreditsAsync(userId);
@@ -44,14 +47,16 @@ public class CreditService : ICreditService
 
             var tx = await RecordTransactionAsync(userId, amount, "credit", reason, before, credits.AvailableCredits, relatedOrderId);
             await _unitOfWork.SaveChangesAsync();
-            await _unitOfWork.CommitTransactionAsync();
+            if (ownsTransaction)
+                await _unitOfWork.CommitTransactionAsync();
 
             _logger.LogInformation("Added {Amount} credits to user {UserId}. Balance: {Balance}", amount, userId, credits.AvailableCredits);
             return MapTransaction(tx);
         }
         catch
         {
-            await _unitOfWork.RollbackTransactionAsync();
+            if (ownsTransaction)
+                await _unitOfWork.RollbackTransactionAsync();
             throw;
         }
     }
@@ -60,7 +65,10 @@ public class CreditService : ICreditService
     {
         if (amount <= 0) throw new BadRequestException("Debit amount must be positive");
 
-        await _unitOfWork.BeginTransactionAsync();
+        var ownsTransaction = _unitOfWork.Context.Database.CurrentTransaction == null;
+        if (ownsTransaction)
+            await _unitOfWork.BeginTransactionAsync();
+
         try
         {
             var credits = await GetOrCreateCreditsAsync(userId);
@@ -76,14 +84,16 @@ public class CreditService : ICreditService
 
             var tx = await RecordTransactionAsync(userId, -amount, "debit", reason, before, credits.AvailableCredits, relatedOrderId);
             await _unitOfWork.SaveChangesAsync();
-            await _unitOfWork.CommitTransactionAsync();
+            if (ownsTransaction)
+                await _unitOfWork.CommitTransactionAsync();
 
             _logger.LogInformation("Deducted {Amount} credits from user {UserId}. Balance: {Balance}", amount, userId, credits.AvailableCredits);
             return MapTransaction(tx);
         }
         catch
         {
-            await _unitOfWork.RollbackTransactionAsync();
+            if (ownsTransaction)
+                await _unitOfWork.RollbackTransactionAsync();
             throw;
         }
     }

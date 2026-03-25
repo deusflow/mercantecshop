@@ -47,12 +47,22 @@ public class AuthService : IAuthService
         if (!VerifyPassword(dto.Password, user.Password))
             throw new UnauthorizedException("Invalid username or password");
 
-        // Update last login
-        var trackedUser = await _unitOfWork.Users.GetByIdAsync(user.Id);
-        if (trackedUser != null)
+        // Snipe-IT users table can reject updates (constraints/triggers we don't control).
+        // LastLogin is best-effort and must never block successful login.
+        try
         {
-            trackedUser.LastLogin = DateTime.UtcNow;
-            _unitOfWork.Users.Update(trackedUser);
+            var trackedUser = await _unitOfWork.Users.GetByIdAsync(user.Id);
+            if (trackedUser != null)
+            {
+                trackedUser.LastLogin = DateTime.UtcNow;
+                _unitOfWork.Users.Update(trackedUser);
+                await _unitOfWork.SaveChangesAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to update LastLogin for user {UserId}", user.Id);
+            _unitOfWork.Context.ChangeTracker.Clear();
         }
 
         var (accessToken, refreshToken, expiresAt) = await CreateTokenPairAsync(user);
@@ -75,6 +85,27 @@ public class AuthService : IAuthService
         if (await _unitOfWork.Users.UsernameExistsAsync(dto.Username))
             throw new BadRequestException($"Username '{dto.Username}' is already taken");
 
+        var locationId = dto.LocationId is 0 ? null : dto.LocationId;
+        var departmentId = dto.DepartmentId is 0 ? null : dto.DepartmentId;
+
+        if (locationId.HasValue)
+        {
+            var locationExists = await _unitOfWork.Context.Locations
+                .AsNoTracking()
+                .AnyAsync(l => l.Id == (uint)locationId.Value);
+            if (!locationExists)
+                throw new BadRequestException($"Location '{locationId.Value}' does not exist");
+        }
+
+        if (departmentId.HasValue)
+        {
+            var departmentExists = await _unitOfWork.Context.Departments
+                .AsNoTracking()
+                .AnyAsync(d => d.Id == (uint)departmentId.Value);
+            if (!departmentExists)
+                throw new BadRequestException($"Department '{departmentId.Value}' does not exist");
+        }
+
         // Hash password using BCrypt ($2a$ — compatible with Snipe-IT $2y$ on verify)
         var hashedPassword = BCrypt.Net.BCrypt.HashPassword(dto.Password, workFactor: 12);
 
@@ -87,8 +118,8 @@ public class AuthService : IAuthService
             LastName = dto.LastName,
             Phone = dto.Phone,
             Jobtitle = dto.JobTitle,
-            LocationId = dto.LocationId,
-            DepartmentId = dto.DepartmentId,
+            LocationId = locationId,
+            DepartmentId = departmentId,
             Activated = true,
             ActivatedAt = DateTime.UtcNow,
             ShowInList = true,
@@ -97,34 +128,43 @@ public class AuthService : IAuthService
             Permissions = "{}"
         };
 
-        await _unitOfWork.Users.AddAsync(user);
-        await _unitOfWork.SaveChangesAsync();
-
-        // Init credit balance
-        var credits = new WebShopUserCredits
+        await _unitOfWork.BeginTransactionAsync();
+        try
         {
-            UserId = user.Id,
-            AvailableCredits = 0m,
-            TotalSpent = 0m,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
-        };
-        await _unitOfWork.Context.WebShopUserCredits.AddAsync(credits);
+            await _unitOfWork.Users.AddAsync(user);
+            await _unitOfWork.SaveChangesAsync();
 
-        var (accessToken, refreshToken, expiresAt) = await CreateTokenPairAsync(user);
-        await _unitOfWork.SaveChangesAsync();
+            // Init credit balance
+            var credits = new WebShopUserCredits
+            {
+                UserId = user.Id,
+                AvailableCredits = 0m,
+                TotalSpent = 0m,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+            await _unitOfWork.Context.WebShopUserCredits.AddAsync(credits);
 
-        _logger.LogInformation("New user registered: {UserId}", user.Id);
+            var (accessToken, refreshToken, expiresAt) = await CreateTokenPairAsync(user);
+            await _unitOfWork.SaveChangesAsync();
 
-        return BuildAuthResponse(user, accessToken, refreshToken, expiresAt);
+            await _unitOfWork.CommitTransactionAsync();
+
+            _logger.LogInformation("New user registered: {UserId}", user.Id);
+            return BuildAuthResponse(user, accessToken, refreshToken, expiresAt);
+        }
+        catch
+        {
+            await _unitOfWork.RollbackTransactionAsync();
+            throw;
+        }
     }
 
     // ─── Refresh ──────────────────────────────────────────────────────────
 
     public async Task<AuthResponseDto> RefreshTokenAsync(string refreshToken)
     {
-        var stored = await _unitOfWork.Context.RefreshTokens
-            .FirstOrDefaultAsync(t => t.Token == refreshToken);
+        var (stored, hashedInput) = await FindRefreshTokenForValidationAsync(refreshToken);
 
         if (stored == null || !stored.IsActive)
             throw new UnauthorizedException("Invalid or expired refresh token");
@@ -137,7 +177,11 @@ public class AuthService : IAuthService
         stored.RevokedAt = DateTime.UtcNow;
 
         var (accessToken, newRefreshToken, expiresAt) = await CreateTokenPairAsync(user);
-        stored.ReplacedByToken = newRefreshToken;
+        stored.ReplacedByToken = HashToken(newRefreshToken);
+
+        // Transparent migration for legacy plaintext tokens.
+        if (!string.Equals(stored.Token, hashedInput, StringComparison.OrdinalIgnoreCase))
+            stored.Token = hashedInput;
 
         _unitOfWork.Context.RefreshTokens.Update(stored);
         await _unitOfWork.SaveChangesAsync();
@@ -147,13 +191,15 @@ public class AuthService : IAuthService
 
     // ─── Revoke ───────────────────────────────────────────────────────────
 
-    public async Task RevokeTokenAsync(string refreshToken)
+    public async Task RevokeTokenAsync(int userId, string refreshToken)
     {
-        var stored = await _unitOfWork.Context.RefreshTokens
-            .FirstOrDefaultAsync(t => t.Token == refreshToken);
+        var (stored, hashedInput) = await FindRefreshTokenForValidationAsync(refreshToken, (uint)userId);
 
         if (stored == null || !stored.IsActive)
             throw new UnauthorizedException("Token not found or already revoked");
+
+        if (!string.Equals(stored.Token, hashedInput, StringComparison.OrdinalIgnoreCase))
+            stored.Token = hashedInput;
 
         stored.RevokedAt = DateTime.UtcNow;
         _unitOfWork.Context.RefreshTokens.Update(stored);
@@ -185,7 +231,7 @@ public class AuthService : IAuthService
         var storedToken = new RefreshToken
         {
             UserId = user.Id,
-            Token = rawRefresh,
+            Token = HashToken(rawRefresh),
             ExpiresAt = DateTime.UtcNow.AddDays(_jwtSettings.RefreshTokenExpiryInDays),
             CreatedAt = DateTime.UtcNow
         };
@@ -195,6 +241,32 @@ public class AuthService : IAuthService
 
         var expiresAt = DateTime.UtcNow.AddMinutes(_jwtSettings.ExpiryInMinutes);
         return (accessToken, rawRefresh, expiresAt);
+    }
+
+    private async Task<(RefreshToken? token, string hashedInput)> FindRefreshTokenForValidationAsync(
+        string rawRefreshToken,
+        uint? userId = null)
+    {
+        var hashed = HashToken(rawRefreshToken);
+
+        IQueryable<RefreshToken> query = _unitOfWork.Context.RefreshTokens;
+        if (userId.HasValue)
+            query = query.Where(t => t.UserId == userId.Value);
+
+        var token = await query.FirstOrDefaultAsync(t => t.Token == hashed);
+        if (token != null)
+            return (token, hashed);
+
+        // Legacy fallback: support plaintext rows created before hashing was introduced.
+        token = await query.FirstOrDefaultAsync(t => t.Token == rawRefreshToken);
+        return (token, hashed);
+    }
+
+    private static string HashToken(string token)
+    {
+        using var sha = System.Security.Cryptography.SHA256.Create();
+        var bytes = System.Text.Encoding.UTF8.GetBytes(token);
+        return Convert.ToHexString(sha.ComputeHash(bytes));
     }
 
     private static AuthResponseDto BuildAuthResponse(

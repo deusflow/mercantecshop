@@ -14,7 +14,10 @@ public static class ClaimsPrincipalExtensions
                  ?? user.FindFirstValue(ClaimTypes.NameIdentifier)
                  ?? user.FindFirstValue("sub");
 
-        return int.TryParse(value, out var id) ? id : 0;
+        if (!int.TryParse(value, out var id) || id <= 0)
+            throw new UnauthorizedException("Invalid user token");
+
+        return id;
     }
 
     /// <summary>Returns the authenticated user's role ("Admin" or "User")</summary>

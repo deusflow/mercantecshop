@@ -22,9 +22,11 @@ public class UserRepository : Repository<User>, IUserRepository
     /// </summary>
     public async Task<User?> GetByEmailAsync(string email)
     {
+        var normalized = email.Trim();
+
         return await _dbSet
             .AsNoTracking()
-            .FirstOrDefaultAsync(u => u.Email!.ToLower() == email.ToLower());
+            .FirstOrDefaultAsync(u => u.Email != null && u.Email == normalized);
     }
 
     /// <summary>
@@ -32,9 +34,11 @@ public class UserRepository : Repository<User>, IUserRepository
     /// </summary>
     public async Task<User?> GetByUsernameAsync(string username)
     {
+        var normalized = username.Trim();
+
         return await _dbSet
             .AsNoTracking()
-            .FirstOrDefaultAsync(u => u.Username!.ToLower() == username.ToLower());
+            .FirstOrDefaultAsync(u => u.Username != null && u.Username == normalized);
     }
 
     /// <summary>
@@ -43,13 +47,13 @@ public class UserRepository : Repository<User>, IUserRepository
     /// </summary>
     public async Task<User?> GetByEmailOrUsernameAsync(string emailOrUsername)
     {
-        var searchTerm = emailOrUsername.ToLower();
+        var searchTerm = emailOrUsername.Trim();
         
         return await _dbSet
             .AsNoTracking()
             .FirstOrDefaultAsync(u => 
-                u.Email!.ToLower() == searchTerm || 
-                u.Username!.ToLower() == searchTerm);
+                (u.Email != null && u.Email == searchTerm) ||
+                (u.Username != null && u.Username == searchTerm));
     }
 
     /// <summary>
@@ -57,8 +61,10 @@ public class UserRepository : Repository<User>, IUserRepository
     /// </summary>
     public async Task<bool> EmailExistsAsync(string email)
     {
+        var normalized = email.Trim();
+
         return await _dbSet
-            .AnyAsync(u => u.Email!.ToLower() == email.ToLower());
+            .AnyAsync(u => u.Email != null && u.Email == normalized);
     }
 
     /// <summary>
@@ -66,8 +72,10 @@ public class UserRepository : Repository<User>, IUserRepository
     /// </summary>
     public async Task<bool> UsernameExistsAsync(string username)
     {
+        var normalized = username.Trim();
+
         return await _dbSet
-            .AnyAsync(u => u.Username!.ToLower() == username.ToLower());
+            .AnyAsync(u => u.Username != null && u.Username == normalized);
     }
 
     /// <summary>
@@ -133,15 +141,15 @@ public class UserRepository : Repository<User>, IUserRepository
     /// </summary>
     public async Task<IEnumerable<User>> SearchUsersAsync(string searchTerm)
     {
-        var term = searchTerm.ToLower();
+        var term = $"%{searchTerm.Trim()}%";
         
         return await _dbSet
             .AsNoTracking()
             .Where(u => u.DeletedAt == null && (
-                (u.FirstName != null && u.FirstName.ToLower().Contains(term)) ||
-                (u.LastName != null && u.LastName.ToLower().Contains(term)) ||
-                (u.Email != null && u.Email.ToLower().Contains(term)) ||
-                (u.Username != null && u.Username.ToLower().Contains(term))
+                (u.FirstName != null && EF.Functions.Like(u.FirstName, term)) ||
+                (u.LastName != null && EF.Functions.Like(u.LastName, term)) ||
+                (u.Email != null && EF.Functions.Like(u.Email, term)) ||
+                (u.Username != null && EF.Functions.Like(u.Username, term))
             ))
             .ToListAsync();
     }
@@ -165,12 +173,12 @@ public class UserRepository : Repository<User>, IUserRepository
         // Фильтр по поиску
         if (!string.IsNullOrWhiteSpace(searchTerm))
         {
-            var term = searchTerm.ToLower();
+            var term = $"%{searchTerm.Trim()}%";
             query = query.Where(u =>
-                (u.FirstName != null && u.FirstName.ToLower().Contains(term)) ||
-                (u.LastName != null && u.LastName.ToLower().Contains(term)) ||
-                (u.Email != null && u.Email.ToLower().Contains(term)) ||
-                (u.Username != null && u.Username.ToLower().Contains(term))
+                (u.FirstName != null && EF.Functions.Like(u.FirstName, term)) ||
+                (u.LastName != null && EF.Functions.Like(u.LastName, term)) ||
+                (u.Email != null && EF.Functions.Like(u.Email, term)) ||
+                (u.Username != null && EF.Functions.Like(u.Username, term))
             );
         }
         
