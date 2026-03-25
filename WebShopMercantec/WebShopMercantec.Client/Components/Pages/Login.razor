@@ -1,0 +1,107 @@
+@page "/login"
+@inject AuthApiClient AuthApi
+@inject AuthStateProvider AuthState
+@inject NavigationManager Nav
+
+<PageTitle>Login - TechShop</PageTitle>
+
+<!-- КОНТЕЙНЕР ДЛЯ ФОРМЫ ВХОДА -->
+<div class="login-container fade-in">
+    <div class="login-card card">
+        
+        <!-- ЗАГОЛОВОК ФОРМЫ -->
+        <div class="login-header">
+            <h2>Sign In</h2>
+            <p>Enter your credentials to access the shop.</p>
+        </div>
+
+        <!-- ФОРМА ВХОДА -->
+        <EditForm class="login-form" Model="_model" OnValidSubmit="SubmitAsync">
+            <DataAnnotationsValidator />
+
+            <!-- Поле Email -->
+            <div class="form-group">
+                <label class="form-label" for="username">Username</label>
+                <InputText id="username" class="form-input" @bind-Value="_model.Username" placeholder="superadmin" />
+            </div>
+
+            <!-- Поле Password -->
+            <div class="form-group">
+                <label class="form-label" for="password">Password</label>
+                <InputText id="password" type="password" class="form-input" @bind-Value="_model.Password" placeholder="Enter your password" />
+            </div>
+
+            <!-- Чекбокс "Remember Me" и "Забыл пароль" -->
+            <div class="form-group flex-between">
+                <label class="checkbox-label">
+                    <InputCheckbox @bind-Value="_model.RememberMe" />
+                    <span>Remember me</span>
+                </label>
+                <a href="/forgot-password" class="link-secondary">Forgot password?</a>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(_error))
+            {
+                <div class="alert alert-danger" role="alert">@_error</div>
+            }
+
+            <!-- Кнопка входа -->
+            <button type="submit" class="btn btn-primary btn-large" style="width: 100%;" disabled="@_isBusy">
+                @(_isBusy ? "Signing in..." : "Sign In")
+            </button>
+
+        </EditForm>
+
+        <!-- ДОПОЛНИТЕЛЬНЫЕ ОПЦИИ -->
+        <div class="login-footer">
+            <p class="text-secondary">
+                Don't have an account? <a href="/register" class="link-accent">Contact an administrator</a>
+            </p>
+        </div>
+
+    </div>
+</div>
+
+@code {
+    private readonly LoginDto _model = new LoginDto();
+    private bool _isBusy;
+    private string? _error;
+
+    private async Task SubmitAsync()
+    {
+        if (_isBusy)
+        {
+            return;
+        }
+
+        _isBusy = true;
+        _error = null;
+
+        try
+        {
+            var auth = await AuthApi.LoginAsync(_model);
+            await AuthState.MarkUserAuthenticatedAsync(auth.AccessToken, auth.RefreshToken);
+            Nav.NavigateTo("/");
+        }
+        catch (HttpRequestException ex)
+        {
+            if (ex.StatusCode is not null)
+            {
+                _error = $"Login failed ({(int)ex.StatusCode}).";
+            }
+            else
+            {
+                _error = "Login failed. Network or server error.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+}
+

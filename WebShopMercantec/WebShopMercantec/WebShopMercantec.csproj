@@ -28,7 +28,11 @@
         <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.9.0" />
         <ProjectReference Include="..\..\WebShopMercantec.Shared\WebShopMercantec.Shared.csproj" />
         <ProjectReference Include="..\WebShopMercantec.Client\WebShopMercantec.Client.csproj" />
-        <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="9.0.0" />
+    </ItemGroup>
+
+
+    <ItemGroup>
+      <Folder Include="wwwroot\" />
     </ItemGroup>
 
 </Project>

@@ -1,0 +1,80 @@
+﻿@page "/"
+@namespace WebShopMercantec.Client.Components.Pages
+@inherits WebShopMercantec.Client.Components.Pages.HomeBase
+
+<PageTitle>Catalog - TechShop</PageTitle>
+
+<!-- ЗАГОЛОВОК СТРАНИЦЫ -->
+<div class="page-header text-center fade-in">
+    <h1>Find Your Next Gear</h1>
+    <p class="mx-auto">The best equipment, available for you. Powered by credits.</p>
+</div>
+
+<!-- ФИЛЬТРЫ И ПОИСК -->
+<div class="filters-section mb-xl fade-in delay-1">
+    <div class="flex-center gap-lg">
+        <div class="search-box">
+            <input
+                type="text"
+                class="form-input"
+                placeholder="Search for a MacBook, monitor, etc."
+                style="min-width: 400px;"
+                @bind="SearchText"
+                @bind:event="oninput"
+                @onkeydown="HandleSearchKeyDown" />
+        </div>
+        <div class="filter-buttons flex gap-md">
+            <button class="btn btn-primary" @onclick="SearchAsync" disabled="@IsLoading">Search</button>
+            <button class="btn btn-secondary" @onclick="ClearSearchAsync" disabled="@IsLoading">Clear</button>
+        </div>
+    </div>
+</div>
+
+@if (IsLoading)
+{
+    <p>Loading products...</p>
+}
+else if (!string.IsNullOrWhiteSpace(Error))
+{
+    <div class="alert alert-danger" role="alert">@Error</div>
+}
+else if (Items.Count == 0)
+{
+    <p>No products found.</p>
+}
+else
+{
+    <div class="grid grid-4">
+        @foreach (var item in Items)
+        {
+            <div class="card product-card fade-in-item">
+                <div class="product-image">
+                    <div class="placeholder-image"></div>
+                </div>
+                <div class="product-info">
+                    <h3 class="product-title">@item.Name</h3>
+                    <p class="product-description">@Describe(item)</p>
+                    <div class="flex-between mt-lg">
+                        <span class="product-price">@item.Price Credits</span>
+                        <NavLink href="@GetProductHref(item.Id)" class="btn btn-primary btn-small">View</NavLink>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <div class="pagination mt-xl">
+        <button class="btn btn-secondary btn-small" @onclick="PrevPageAsync" disabled="@(IsLoading || Page <= 1)">Prev</button>
+        <span class="pagination-info">Page @Page of @TotalPages</span>
+        <button class="btn btn-secondary btn-small" @onclick="NextPageAsync" disabled="@(IsLoading || Page >= TotalPages)">Next</button>
+    </div>
+}
+
+@* code-behind moved to Home.razor.cs to avoid Razor design-time symbol glitches *@
+
+@code {
+    private Task HandleSearchKeyDown(KeyboardEventArgs args) => OnSearchKeyDown(args);
+
+    private static string Describe(ProductDto item) => HomeBase.GetDescription(item);
+}
+

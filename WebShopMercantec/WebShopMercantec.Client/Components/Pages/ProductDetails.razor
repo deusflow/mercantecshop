@@ -1,4 +1,5 @@
 @page "/product/{id:int}"
+@inject HttpClient Http
 
 <PageTitle>Product Details - TechShop</PageTitle>
 
@@ -7,8 +8,23 @@
     
     <!-- Кнопка "Назад" -->
     <div class="back-link-container">
-        <a href="/" class="back-link">‹ Back to Catalog</a>
+        <NavLink href="/" class="back-link">‹ Back to Catalog</NavLink>
     </div>
+
+    @if (_isLoading)
+    {
+        <p>Loading product details...</p>
+    }
+    else if (!string.IsNullOrWhiteSpace(_error))
+    {
+        <div class="alert alert-danger" role="alert">@_error</div>
+    }
+    else if (_product is null)
+    {
+        <div class="alert alert-info" role="alert">Product not found.</div>
+    }
+    else
+    {
 
     <div class="product-details-layout">
         
@@ -24,20 +40,20 @@
             
             <!-- Название и категория -->
             <div class="product-category">
-                <span class="badge badge-primary">Laptop</span>
+                <span class="badge badge-primary">@_product.CategoryName</span>
             </div>
             
-            <h1 class="product-title-large">MacBook Pro 14"</h1>
+            <h1 class="product-title-large">@_product.Name</h1>
             
             <p class="product-description-large">
-                The M3 Pro chip brings even greater performance for more demanding workflows. With 16GB of unified memory and a 512GB SSD, this laptop flies through professional creative and scientific applications.
+                @(!string.IsNullOrWhiteSpace(_product.Notes) ? _product.Notes : "No description provided.")
             </p>
 
             <!-- Цена и действия -->
             <div class="product-purchase-section card">
                 <div class="price-section">
                     <span class="price-label">Price</span>
-                    <span class="price-value">850 Credits</span>
+                    <span class="price-value">@_product.Price Credits</span>
                 </div>
                 
                 <div class="purchase-actions">
@@ -47,31 +63,34 @@
                 </div>
                 
                 <p class="purchase-info">
-                    Your current balance: <strong>1,250 Credits</strong>
+                    Availability:
+                    <strong>@(_product.IsAvailable ? "In Stock" : "Unavailable")</strong>
                 </p>
             </div>
 
             <!-- Характеристики -->
             <div class="product-specs">
                 <div class="spec-item">
-                    <span class="spec-label">Processor</span>
-                    <span class="spec-value">Apple M3 Pro</span>
+                    <span class="spec-label">Manufacturer</span>
+                    <span class="spec-value">@(_product.ManufacturerName ?? "-" )</span>
                 </div>
                 <div class="spec-item">
-                    <span class="spec-label">Memory</span>
-                    <span class="spec-value">16GB Unified</span>
+                    <span class="spec-label">Model</span>
+                    <span class="spec-value">@(_product.ModelName ?? "-" )</span>
                 </div>
                 <div class="spec-item">
-                    <span class="spec-label">Storage</span>
-                    <span class="spec-value">512GB SSD</span>
+                    <span class="spec-label">Location</span>
+                    <span class="spec-value">@(_product.LocationName ?? "-" )</span>
                 </div>
                 <div class="spec-item">
-                    <span class="spec-label">Display</span>
-                    <span class="spec-value">14.2" Liquid Retina XDR</span>
+                    <span class="spec-label">Status</span>
+                    <span class="spec-value">@_product.StatusLabel</span>
                 </div>
                 <div class="spec-item">
                     <span class="spec-label">Availability</span>
-                    <span class="spec-value text-success">In Stock</span>
+                    <span class="spec-value @(_product.IsAvailable ? "text-success" : "text-danger")">
+                        @(_product.IsAvailable ? "In Stock" : "Unavailable")
+                    </span>
                 </div>
             </div>
 
@@ -106,13 +125,36 @@
         </div>
     </div>
 
+    }
+
 </div>
 
 @code {
     [Parameter]
     public int Id { get; set; }
 
-    // Здесь будет логика для загрузки конкретного продукта из базы данных
-    // На основе параметра Id
+    private ProductDto? _product;
+    private bool _isLoading;
+    private string? _error;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _isLoading = true;
+        _error = null;
+        _product = null;
+
+        try
+        {
+            _product = await Http.GetFromJsonAsync<ProductDto>($"/api/products/{Id}");
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
 }
 

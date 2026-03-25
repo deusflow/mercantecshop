@@ -1,4 +1,5 @@
-﻿@inherits LayoutComponentBase
+﻿@namespace WebShopMercantec.Client.Components.Layout
+@inherits MainLayoutBase
 
 <!-- ГЛАВНЫЙ КОНТЕЙНЕР ПРИЛОЖЕНИЯ -->
 <div class="app-container">
@@ -6,14 +7,14 @@
     <nav class="navbar">
         <div class="container navbar-content">
             <!-- Логотип / Название магазина -->
-            <a href="/" class="navbar-brand">TechShop</a>
+            <NavLink href="/" Match="NavLinkMatch.All" class="navbar-brand">TechShop</NavLink>
             
             <!-- Навигационное меню -->
             <ul class="navbar-menu">
-                <li><a href="/" class="navbar-link">Catalog</a></li>
-                <li><a href="/user-profile" class="navbar-link">Profile</a></li>
-                <li><a href="/admin/users" class="navbar-link">Admin Panel</a></li>
-                <li><a href="/login" class="navbar-link">Login</a></li>
+                <li><NavLink href="/" Match="NavLinkMatch.All" class="navbar-link">Catalog</NavLink></li>
+                <li><NavLink href="/user-profile" class="navbar-link">Profile</NavLink></li>
+                <li><NavLink href="/admin/users" class="navbar-link">Admin Panel</NavLink></li>
+                <li><NavLink href="/login" class="navbar-link">Login</NavLink></li>
             </ul>
             
             <!-- Баланс кредитов пользователя (пример) -->
@@ -26,14 +27,14 @@
     <!-- ОСНОВНОЙ КОНТЕНТ СТРАНИЦЫ -->
     <main class="main-content">
         <div class="container">
-            @Body
+            @PageBody
         </div>
     </main>
-в 
+
     <!-- ФУТЕР -->
     <footer class="footer">
         <div class="container">
-            <p style="text-align: center; color: var(--color-text-tertiary);">
+            <p style="text-align: center; color: #9aa0a6;">
                 © 2025 Mercantec Shop. All rights reserved.
             </p>
         </div>
