@@ -3,6 +3,7 @@
 /* Заголовок страницы */
 .page-header {
     margin-bottom: var(--spacing-xxl);
+    text-align: center;
 }
 
 .page-header p {

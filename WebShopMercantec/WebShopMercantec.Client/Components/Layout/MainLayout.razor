@@ -1,37 +1,47 @@
 ﻿@namespace WebShopMercantec.Client.Components.Layout
 @inherits MainLayoutBase
+@inject WebShopMercantec.Client.Auth.AuthStateProvider AuthState
+@inject NavigationManager Nav
+@inject HttpClient Http
 
-<!-- ГЛАВНЫЙ КОНТЕЙНЕР ПРИЛОЖЕНИЯ -->
 <div class="app-container">
-    <!-- НАВИГАЦИОННАЯ ПАНЕЛЬ -->
     <nav class="navbar">
         <div class="container navbar-content">
-            <!-- Логотип / Название магазина -->
             <NavLink href="/" Match="NavLinkMatch.All" class="navbar-brand">TechShop</NavLink>
-            
-            <!-- Навигационное меню -->
+
             <ul class="navbar-menu">
                 <li><NavLink href="/" Match="NavLinkMatch.All" class="navbar-link">Catalog</NavLink></li>
-                <li><NavLink href="/user-profile" class="navbar-link">Profile</NavLink></li>
-                <li><NavLink href="/admin/users" class="navbar-link">Admin Panel</NavLink></li>
-                <li><NavLink href="/login" class="navbar-link">Login</NavLink></li>
+
+                <AuthorizeView>
+                    <Authorized>
+                        <li><NavLink href="/user-profile" class="navbar-link">Profile</NavLink></li>
+                        <li><NavLink href="/admin/users" class="navbar-link">Admin Panel</NavLink></li>
+                        <li>
+                            <button class="navbar-link" style="background:none; border:none; padding:0; cursor:pointer;" @onclick="LogoutAsync">Log out</button>
+                        </li>
+                    </Authorized>
+                    <NotAuthorized>
+                        <li><NavLink href="/login" class="navbar-link">Login</NavLink></li>
+                    </NotAuthorized>
+                </AuthorizeView>
             </ul>
-            
-            <!-- Баланс кредитов пользователя (пример) -->
-            <div class="user-credits">
-                <span class="badge badge-success">1,250 Credits</span>
-            </div>
+
+            <AuthorizeView>
+                <Authorized>
+                    <div class="user-credits">
+                        <span class="badge badge-success">@(_credits.HasValue ? $"{_credits.Value:N0} Credits" : "Loading Credits...")</span>
+                    </div>
+                </Authorized>
+            </AuthorizeView>
         </div>
     </nav>
 
-    <!-- ОСНОВНОЙ КОНТЕНТ СТРАНИЦЫ -->
     <main class="main-content">
         <div class="container">
             @PageBody
         </div>
     </main>
 
-    <!-- ФУТЕР -->
     <footer class="footer">
         <div class="container">
             <p style="text-align: center; color: #9aa0a6;">
@@ -41,9 +51,40 @@
     </footer>
 </div>
 
-<!-- ОБРАБОТЧИК ОШИБОК BLAZOR -->
 <div id="blazor-error-ui" data-nosnippet>
     An unhandled error has occurred.
     <a href="." class="reload">Reload</a>
     <span class="dismiss">🗙</span>
 </div>
+
+@code {
+    private async Task LogoutAsync()
+    {
+        // erase the auth cookie and mark user as logged out in the state provider
+        await AuthState.MarkUserLoggedOutAsync();
+        
+        // swipe to the login page
+        Nav.NavigateTo("/login");
+    }
+    
+    private decimal? _credits;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Проверяем, залогинен ли пользователь
+        var authState = await AuthState.GetAuthenticationStateAsync();
+        if (authState.User.Identity?.IsAuthenticated == true)
+        {
+            try
+            {
+                // Идем на сервер и узнаем баланс
+                var user = await Http.GetFromJsonAsync<WebShopMercantec.Shared.DTOs.UserDto>("/api/Users/me");
+                _credits = user?.AvailableCredits ?? 0;
+            }
+            catch
+            {
+                _credits = 0;
+            }
+        }
+    }
+}

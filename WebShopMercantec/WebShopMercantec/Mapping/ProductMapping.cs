@@ -45,10 +45,7 @@ public static class ProductMapping
             RtdLocationId = asset.RtdLocationId,
             AssignedTo = asset.AssignedTo,
             AssignedType = asset.AssignedType,
-            IsAvailable = asset.StatusId is 1 or 2
-                          && asset.AssignedTo == null
-                          && asset.Requestable == 1
-                          && (asset.Archived == false || asset.Archived == null),
+            IsAvailable = IsAssetAvailableStrict(asset, model, statusLabel),
             Requestable = asset.Requestable == 1,
             Archived = asset.Archived,
             WarrantyMonths = asset.WarrantyMonths,
@@ -104,15 +101,22 @@ public static class ProductMapping
             ManufacturerName = null,
             ModelNumber = null,
             LocationId = asset.LocationId,
-            IsAvailable = asset.StatusId is 1 or 2
-                          && asset.AssignedTo == null
-                          && asset.Requestable == 1
-                          && (asset.Archived == false || asset.Archived == null),
+            // Strict availability requires model/status metadata; without details mapper keeps false to avoid false-positives.
+            IsAvailable = false,
             Requestable = asset.Requestable == 1,
             Archived = asset.Archived,
             CreatedAt = asset.CreatedAt,
             UpdatedAt = asset.UpdatedAt
         };
+    }
+
+    private static bool IsAssetAvailableStrict(Asset asset, Model? model, StatusLabel? statusLabel)
+    {
+        return asset.DeletedAt == null
+               && asset.AssignedTo == null
+               && asset.Requestable == 1
+               && model is { Requestable: 1, DeletedAt: null }
+               && statusLabel is { Deployable: true, DeletedAt: null };
     }
 
     /// <summary>

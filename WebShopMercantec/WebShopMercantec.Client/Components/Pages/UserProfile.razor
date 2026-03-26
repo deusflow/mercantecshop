@@ -1,124 +1,174 @@
 @page "/user-profile"
+@using WebShopMercantec.Shared.DTOs
 @attribute [Authorize]
+@inject HttpClient Http
 
 <PageTitle>User Profile - TechShop</PageTitle>
 
 <!-- ПРОФИЛЬ ПОЛЬЗОВАТЕЛЯ -->
 <div class="profile-container fade-in">
-    
-    <!-- ЗАГОЛОВОК -->
-    <div class="page-header text-center">
-        <h1>Your Profile</h1>
-        <p class="mx-auto">Manage your account, view history, and track your credits.</p>
-    </div>
+    @if (_isLoading)
+    {
+        <div class="text-center" style="padding: 50px;">
+            <p>Loading profile...</p>
+        </div>
+    }
+    else if (!string.IsNullOrWhiteSpace(_error))
+    {
+        <div class="alert alert-danger" role="alert" style="margin: 20px;">
+            @_error
+        </div>
+    }
+    else if (_user != null)
+    {
+        <!-- ЗАГОЛОВОК -->
+        <div class="page-header text-center">
+            <h1>Your Profile</h1>
+            <p class="mx-auto">Manage your account, view history, and track your credits.</p>
+        </div>
 
-    <div class="profile-layout mt-xl">
-        
-        <!-- ЛЕВАЯ КОЛОНКА: ИНФОРМАЦИЯ О ПОЛЬЗОВАТЕЛЕ -->
-        <div class="profile-sidebar">
+        <div class="profile-layout mt-xl">
             
-            <!-- Карточка пользователя -->
-            <div class="card user-info-card text-center">
-                <div class="user-avatar">
-                    <span>JD</span>
-                </div>
-                <h3 class="user-name mt-lg">John Doe</h3>
-                <p class="user-email">john.doe@mercantec.dk</p>
+            <!-- ЛЕВАЯ КОЛОНКА: ИНФОРМАЦИЯ О ПОЛЬЗОВАТЕЛЕ -->
+            <div class="profile-sidebar">
                 
-                <!-- Баланс кредитов -->
-                <div class="credits-display">
-                    <span class="credits-label">Available Credits</span>
-                    <span class="credits-amount">1,250</span>
+                <!-- Карточка пользователя -->
+                <div class="card user-info-card text-center">
+                    <div class="user-avatar">
+                        <span>@(_user.Initials)</span>
+                    </div>
+                    <h3 class="user-name mt-lg">@_user.FullName</h3>
+                    <p class="user-email">@_user.Email</p>
+                    
+                    <!-- Баланс кредитов -->
+                    <div class="credits-display">
+                        <span class="credits-label">Available Credits</span>
+                        <span class="credits-amount">@_user.AvailableCredits.ToString("N0")</span>
+                    </div>
                 </div>
+
+                <!-- Статистика -->
+                <div class="card stats-card">
+                    <div class="stat-item">
+                        <span class="stat-label">Total Purchases</span>
+                        <span class="stat-value">@_user.TotalPurchases</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Credits Spent</span>
+                        <span class="stat-value">@_user.TotalCreditsSpent.ToString("N0")</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Member Since</span>
+                        <span class="stat-value">@(_user.CreatedAt?.ToString("MMM yyyy") ?? "N/A")</span>
+                    </div>
+                </div>
+                <button class="btn btn-secondary" style="width: 100%;">
+                    Edit Profile
+                </button>
             </div>
 
-            <!-- Статистика -->
-            <div class="card stats-card">
-                <div class="stat-item">
-                    <span class="stat-label">Total Purchases</span>
-                    <span class="stat-value">12</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-label">Credits Spent</span>
-                    <span class="stat-value">3,450</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-label">Member Since</span>
-                    <span class="stat-value">Jan 2024</span>
+            <!-- ПРАВАЯ КОЛОНКА: ИСТОРИЯ ПОКУПОК -->
+            <div class="profile-content">
+                
+                <!-- История транзакций -->
+                <div class="card">
+                    <div class="flex-between mb-lg">
+                        <h2>Transaction History</h2>
+                        <button class="btn btn-secondary btn-small">Export Data</button>
+                    </div>
+
+                    <div class="table-container">
+                        @if (_transactions == null)
+                        {
+                            <p>Loading transactions...</p>
+                        }
+                        else if (_transactions.Count == 0)
+                        {
+                            <p>No transactions found.</p>
+                        }
+                        else
+                        {
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Item</th>
+                                        <th>Type</th>
+                                        <th class="text-right">Credits</th>
+                                        <th class="text-center">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var tx in _transactions)
+                                    {
+                                        <tr>
+                                            <td>@tx.CreatedAt.ToString("MMM dd, yyyy")</td>
+                                            <td>@tx.ItemName</td>
+                                            <td>@tx.Type</td>
+                                            <td class="text-right @(tx.Amount > 0 ? "text-success" : "")">
+                                                @(tx.Amount > 0 ? "+" : "")@tx.Amount.ToString("N0")
+                                            </td>
+                                            <td class="text-center">
+                                                <span class="badge @((tx.Status ?? "").Equals("Completed", StringComparison.OrdinalIgnoreCase) ? "badge-success" : "badge-primary")">
+                                                    @(string.IsNullOrWhiteSpace(tx.Status) ? "Completed" : tx.Status)
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        }
+                    </div>
                 </div>
             </div>
-            <button class="btn btn-secondary" style="width: 100%;">
-                Edit Profile
-            </button>
         </div>
-
-        <!-- ПРАВАЯ КОЛОНКА: ИСТОРИЯ ПОКУПОК -->
-        <div class="profile-content">
-            
-            <!-- История транзакций -->
-            <div class="card">
-                <div class="flex-between mb-lg">
-                    <h2>Transaction History</h2>
-                    <button class="btn btn-secondary btn-small">Export Data</button>
-                </div>
-
-                <div class="table-container">
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Item</th>
-                                <th>Type</th>
-                                <th class="text-right">Credits</th>
-                                <th class="text-center">Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>Oct 10, 2025</td>
-                                <td>MacBook Pro 14"</td>
-                                <td>Purchase</td>
-                                <td class="text-right">-850</td>
-                                <td class="text-center"><span class="badge badge-success">Completed</span></td>
-                            </tr>
-                            <tr>
-                                <td>Oct 08, 2025</td>
-                                <td>Credits Added</td>
-                                <td>Admin Credit</td>
-                                <td class="text-right text-success">+1,000</td>
-                                <td class="text-center"><span class="badge badge-primary">Credited</span></td>
-                            </tr>
-                            <tr>
-                                <td>Oct 05, 2025</td>
-                                <td>Wireless Mouse</td>
-                                <td>Purchase</td>
-                                <td class="text-right">-45</td>
-                                <td class="text-center"><span class="badge badge-success">Completed</span></td>
-                            </tr>
-                            <tr>
-                                <td>Oct 03, 2025</td>
-                                <td>Dell UltraSharp Monitor</td>
-                                <td>Purchase</td>
-                                <td class="text-right">-450</td>
-                                <td class="text-center"><span class="badge badge-success">Completed</span></td>
-                            </tr>
-                            <tr>
-                                <td>Oct 01, 2025</td>
-                                <td>Mechanical Keyboard</td>
-                                <td>Purchase</td>
-                                <td class="text-right">-120</td>
-                                <td class="text-center"><span class="badge badge-success">Completed</span></td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
+    }
 </div>
 
 @code {
-    // Здесь будет логика для загрузки данных пользователя
-    // и его истории транзакций из базы данных
+    private bool _isLoading = true;
+    private string? _error;
+    private UserDto? _user;
+    private List<TransactionDto>? _transactions;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadProfileDataAsync();
+    }
+
+    private async Task LoadProfileDataAsync()
+    {
+        _isLoading = true;
+        _error = null;
+
+        try
+        {
+            // Fetch user profile
+            _user = await Http.GetFromJsonAsync<UserDto>("/api/Users/me");
+
+            // Attempt to fetch transactions (graceful fallback if endpoint doesn't exist yet)
+            try 
+            {
+                _transactions = await Http.GetFromJsonAsync<List<TransactionDto>>("/api/Users/me/transactions");
+            }
+            catch
+            {
+                _transactions = new List<TransactionDto>();
+            }
+        }
+        catch (HttpRequestException ex)
+        {
+            _error = $"Failed to load profile data (HTTP {ex.StatusCode}).";
+        }
+        catch (Exception ex)
+        {
+            _error = "An error occurred while loading your profile data.";
+            Console.WriteLine(ex);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
 }
 

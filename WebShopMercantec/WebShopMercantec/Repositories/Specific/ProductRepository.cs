@@ -15,23 +15,17 @@ public class ProductRepository : Repository<Asset>, IProductRepository
 
     /// <summary>
     /// Получить доступные для заказа продукты
-    /// Условия:
-    /// - StatusId = 1 или 2 (Ready to Deploy / Deployable)
-    /// - Не архивировано
-    /// - Не удалено
+    /// Условия доступности (по реальным данным Snipe-IT):
+    /// - Статус входит в active status_labels с Deployable = 1
+    /// - Не удалено (DeletedAt = null)
     /// - Можно запросить (Requestable = 1)
     /// - Не назначено никому (AssignedTo = null)
     /// </summary>
     public async Task<IEnumerable<Asset>> GetAvailableProductsAsync()
     {
-        return await _dbSet
-            .AsNoTracking()
-            .Where(a => 
-                (a.StatusId == 1 || a.StatusId == 2) && // Ready to Deploy
-                (a.Archived == false || a.Archived == null) &&
-                a.DeletedAt == null &&
-                a.Requestable == 1 &&
-                a.AssignedTo == null) // Не назначено пользователю
+        var availabilityRules = await GetAvailabilityRulesAsync();
+
+        return await ApplyAvailableAssetFilter(_dbSet.AsNoTracking(), availabilityRules)
             .OrderBy(a => a.Name)
             .ToListAsync();
     }
@@ -48,7 +42,7 @@ public class ProductRepository : Repository<Asset>, IProductRepository
 
         return await _dbSet
             .AsNoTracking()
-            .Where(a => 
+            .Where(a =>
                 a.ModelId.HasValue &&
                 modelIds.Contains(a.ModelId) &&
                 a.DeletedAt == null)
@@ -78,7 +72,7 @@ public class ProductRepository : Repository<Asset>, IProductRepository
 
         return await _dbSet
             .AsNoTracking()
-            .Where(a => 
+            .Where(a =>
                 a.ModelId.HasValue &&
                 modelIds.Contains(a.ModelId) &&
                 a.DeletedAt == null)
@@ -114,8 +108,8 @@ public class ProductRepository : Repository<Asset>, IProductRepository
     {
         return await _dbSet
             .AsNoTracking()
-            .Where(a => 
-                a.AssignedTo == userId && 
+            .Where(a =>
+                a.AssignedTo == userId &&
                 a.AssignedType == "App\\Models\\User" && // Проверяем тип назначения
                 a.DeletedAt == null)
             .ToListAsync();
@@ -127,7 +121,7 @@ public class ProductRepository : Repository<Asset>, IProductRepository
     public async Task<IEnumerable<Asset>> SearchProductsAsync(string searchTerm)
     {
         var term = $"%{searchTerm.Trim()}%";
-        
+
         return await _dbSet
             .AsNoTracking()
             .Where(a => a.DeletedAt == null && (
@@ -143,29 +137,26 @@ public class ProductRepository : Repository<Asset>, IProductRepository
     /// ЭТО ОСНОВНОЙ МЕТОД ДЛЯ КАТАЛОГА МАГАЗИНА!
     /// </summary>
     public async Task<(IEnumerable<Asset> Products, int TotalCount)> GetProductsPagedAsync(
-        int pageNumber, 
-        int pageSize, 
-        int? categoryId = null, 
-        int? manufacturerId = null, 
-        int? statusId = null, 
-        string? searchTerm = null, 
-        decimal? minPrice = null, 
-        decimal? maxPrice = null, 
+        int pageNumber,
+        int pageSize,
+        int? categoryId = null,
+        int? manufacturerId = null,
+        int? statusId = null,
+        string? searchTerm = null,
+        decimal? minPrice = null,
+        decimal? maxPrice = null,
         bool? availableOnly = true)
     {
         // Базовый запрос
         var query = _dbSet.AsNoTracking().Where(a => a.DeletedAt == null);
-        
+
         // Фильтр: только доступные для заказа
         if (availableOnly == true)
         {
-            query = query.Where(a =>
-                (a.StatusId == 1 || a.StatusId == 2) &&
-                (a.Archived == false || a.Archived == null) &&
-                a.Requestable == 1 &&
-                a.AssignedTo == null);
+            var availabilityRules = await GetAvailabilityRulesAsync();
+            query = ApplyAvailableAssetFilter(query, availabilityRules);
         }
-        
+
         // Фильтр по категории (через Model)
         if (categoryId.HasValue)
         {
@@ -177,7 +168,7 @@ public class ProductRepository : Repository<Asset>, IProductRepository
                 a.ModelId.HasValue &&
                 modelIds.Contains(a.ModelId));
         }
-        
+
         // Фильтр по производителю (через Model)
         if (manufacturerId.HasValue)
         {
@@ -189,13 +180,13 @@ public class ProductRepository : Repository<Asset>, IProductRepository
                 a.ModelId.HasValue &&
                 modelIds.Contains(a.ModelId));
         }
-        
+
         // Фильтр по статусу
         if (statusId.HasValue)
         {
             query = query.Where(a => a.StatusId == statusId);
         }
-        
+
         // Фильтр по поиску
         if (!string.IsNullOrWhiteSpace(searchTerm))
         {
@@ -206,21 +197,21 @@ public class ProductRepository : Repository<Asset>, IProductRepository
                 (a.Serial != null && EF.Functions.Like(a.Serial, term))
             );
         }
-        
+
         // Фильтр по цене
         if (minPrice.HasValue)
         {
             query = query.Where(a => a.PurchaseCost >= minPrice.Value);
         }
-        
+
         if (maxPrice.HasValue)
         {
             query = query.Where(a => a.PurchaseCost <= maxPrice.Value);
         }
-        
+
         // Считаем общее количество
         var totalCount = await query.CountAsync();
-        
+
         // Получаем страницу с сортировкой
         var products = await query
             .OrderBy(a => a.Name)
@@ -228,7 +219,7 @@ public class ProductRepository : Repository<Asset>, IProductRepository
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();
-        
+
         return (products, totalCount);
     }
 
@@ -237,11 +228,15 @@ public class ProductRepository : Repository<Asset>, IProductRepository
     /// </summary>
     public async Task<bool> IsAvailableForCheckoutAsync(uint assetId)
     {
+        var availabilityRules = await GetAvailabilityRulesAsync();
+
         return await _dbSet
             .AnyAsync(a =>
                 a.Id == assetId &&
-                (a.StatusId == 1 || a.StatusId == 2) &&
-                (a.Archived == false || a.Archived == null) &&
+                a.StatusId.HasValue &&
+                availabilityRules.DeployableStatusIds.Contains(a.StatusId.Value) &&
+                a.ModelId.HasValue &&
+                availabilityRules.RequestableModelIds.Contains(a.ModelId.Value) &&
                 a.DeletedAt == null &&
                 a.Requestable == 1 &&
                 a.AssignedTo == null);
@@ -257,8 +252,8 @@ public class ProductRepository : Repository<Asset>, IProductRepository
 
         return await _dbSet
             .AsNoTracking()
-            .FirstOrDefaultAsync(a => 
-                a.AssetTag != null && 
+            .FirstOrDefaultAsync(a =>
+                a.AssetTag != null &&
                 a.AssetTag == normalizedTag &&
                 a.DeletedAt == null);
     }
@@ -281,10 +276,10 @@ public class ProductRepository : Repository<Asset>, IProductRepository
     public async Task<IEnumerable<Asset>> GetProductsRequiringMaintenanceAsync()
     {
         var today = DateOnly.FromDateTime(DateTime.Today);
-        
+
         return await _dbSet
             .AsNoTracking()
-            .Where(a => 
+            .Where(a =>
                 a.DeletedAt == null &&
                 a.NextAuditDate.HasValue &&
                 a.NextAuditDate <= today)
@@ -420,13 +415,9 @@ public class ProductRepository : Repository<Asset>, IProductRepository
 
     public async Task<IEnumerable<AssetWithDetails>> GetAvailableProductsWithDetailsAsync()
     {
-        var assets = await _dbSet.AsNoTracking()
-            .Where(a =>
-                (a.StatusId == 1 || a.StatusId == 2) &&
-                (a.Archived == false || a.Archived == null) &&
-                a.DeletedAt == null &&
-                a.Requestable == 1 &&
-                a.AssignedTo == null)
+        var availabilityRules = await GetAvailabilityRulesAsync();
+
+        var assets = await ApplyAvailableAssetFilter(_dbSet.AsNoTracking(), availabilityRules)
             .OrderBy(a => a.Name)
             .ToListAsync();
         return await ComposeAssetsWithDetailsAsync(assets);
@@ -447,11 +438,8 @@ public class ProductRepository : Repository<Asset>, IProductRepository
 
         if (availableOnly == true)
         {
-            query = query.Where(a =>
-                (a.StatusId == 1 || a.StatusId == 2) &&
-                (a.Archived == false || a.Archived == null) &&
-                a.Requestable == 1 &&
-                a.AssignedTo == null);
+            var availabilityRules = await GetAvailabilityRulesAsync();
+            query = ApplyAvailableAssetFilter(query, availabilityRules);
         }
 
         if (categoryId.HasValue)
@@ -569,5 +557,50 @@ public class ProductRepository : Repository<Asset>, IProductRepository
             .Where(m => m.ManufacturerId == manufacturerId)
             .Select(m => (int?)m.Id)
             .ToListAsync();
+    }
+
+    private async Task<List<int>> GetActiveDeployableStatusIdsAsync()
+    {
+        return await _context.StatusLabels
+            .AsNoTracking()
+            .Where(s => s.Deployable && s.DeletedAt == null)
+            .Select(s => (int)s.Id)
+            .ToListAsync();
+    }
+
+    private async Task<List<int>> GetActiveRequestableModelIdsAsync()
+    {
+        return await _context.Models
+            .AsNoTracking()
+            .Where(m => m.Requestable == 1 && m.DeletedAt == null)
+            .Select(m => (int)m.Id)
+            .ToListAsync();
+    }
+
+    private async Task<(IReadOnlyCollection<int> DeployableStatusIds, IReadOnlyCollection<int> RequestableModelIds)> GetAvailabilityRulesAsync()
+    {
+        var deployableStatusIds = await GetActiveDeployableStatusIdsAsync();
+        var requestableModelIds = await GetActiveRequestableModelIdsAsync();
+
+        return (deployableStatusIds, requestableModelIds);
+    }
+
+    private static IQueryable<Asset> ApplyAvailableAssetFilter(
+        IQueryable<Asset> query,
+        (IReadOnlyCollection<int> DeployableStatusIds, IReadOnlyCollection<int> RequestableModelIds) rules)
+    {
+        if (rules.DeployableStatusIds.Count == 0 || rules.RequestableModelIds.Count == 0)
+        {
+            return query.Where(_ => false);
+        }
+
+        return query.Where(a =>
+            a.StatusId.HasValue &&
+            rules.DeployableStatusIds.Contains(a.StatusId.Value) &&
+            a.ModelId.HasValue &&
+            rules.RequestableModelIds.Contains(a.ModelId.Value) &&
+            a.DeletedAt == null &&
+            a.Requestable == 1 &&
+            a.AssignedTo == null);
     }
 }

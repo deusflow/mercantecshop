@@ -71,8 +71,8 @@ public class ProductDto
     
     public string? AssignedToName { get; set; }
     
-    // Availability
-    public bool IsAvailable { get; set; } // Computed
+    // Availability (strict): asset requestable + model requestable + active deployable status + not assigned
+    public bool IsAvailable { get; set; }
     
     public bool Requestable { get; set; }
     

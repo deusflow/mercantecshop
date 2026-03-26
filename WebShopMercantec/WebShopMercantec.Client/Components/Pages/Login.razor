@@ -3,6 +3,7 @@
 @inject AuthStateProvider AuthState
 @inject NavigationManager Nav
 
+
 <PageTitle>Login - TechShop</PageTitle>
 
 <!-- КОНТЕЙНЕР ДЛЯ ФОРМЫ ВХОДА -->
@@ -22,7 +23,7 @@
             <!-- Поле Email -->
             <div class="form-group">
                 <label class="form-label" for="username">Username</label>
-                <InputText id="username" class="form-input" @bind-Value="_model.Username" placeholder="superadmin" />
+                <InputText id="username" class="form-input" @bind-Value="_model.Username" placeholder="Enter your username" />
             </div>
 
             <!-- Поле Password -->
@@ -103,5 +104,7 @@
             _isBusy = false;
         }
     }
+    
+   
 }
 

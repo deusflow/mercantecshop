@@ -9,6 +9,8 @@ namespace WebShopMercantec.Repositories.Specific;
 /// </summary>
 public class AccessoryRepository : Repository<Accessory>, IAccessoryRepository
 {
+    private const int DefaultLowStockThreshold = 5;
+
     public AccessoryRepository(SnipeItContext context) : base(context)
     {
     }
@@ -22,12 +24,7 @@ public class AccessoryRepository : Repository<Accessory>, IAccessoryRepository
     /// </summary>
     public async Task<IEnumerable<Accessory>> GetAvailableAccessoriesAsync()
     {
-        return await _dbSet
-            .AsNoTracking()
-            .Where(a =>
-                a.Requestable == true &&
-                a.Qty > 0 &&
-                a.DeletedAt == null)
+        return await ApplyAvailableAccessoryFilter(_dbSet.AsNoTracking())
             .OrderBy(a => a.Name)
             .ToListAsync();
     }
@@ -82,7 +79,7 @@ public class AccessoryRepository : Repository<Accessory>, IAccessoryRepository
     public async Task<IEnumerable<Accessory>> SearchAccessoriesAsync(string searchTerm)
     {
         var term = $"%{searchTerm.Trim()}%";
-        
+
         return await _dbSet
             .AsNoTracking()
             .Where(a => a.DeletedAt == null && (
@@ -98,34 +95,34 @@ public class AccessoryRepository : Repository<Accessory>, IAccessoryRepository
     /// ОСНОВНОЙ МЕТОД ДЛЯ КАТАЛОГА АКСЕССУАРОВ
     /// </summary>
     public async Task<(IEnumerable<Accessory> Accessories, int TotalCount)> GetAccessoriesPagedAsync(
-        int pageNumber, 
-        int pageSize, 
-        int? categoryId = null, 
-        int? manufacturerId = null, 
-        string? searchTerm = null, 
+        int pageNumber,
+        int pageSize,
+        int? categoryId = null,
+        int? manufacturerId = null,
+        string? searchTerm = null,
         bool? availableOnly = true)
     {
         // Базовый запрос
         var query = _dbSet.AsNoTracking().Where(a => a.DeletedAt == null);
-        
+
         // Фильтр: только доступные
         if (availableOnly == true)
         {
-            query = query.Where(a => a.Requestable == true && a.Qty > 0);
+            query = ApplyAvailableAccessoryFilter(query);
         }
-        
+
         // Фильтр по категории
         if (categoryId.HasValue)
         {
             query = query.Where(a => a.CategoryId == categoryId);
         }
-        
+
         // Фильтр по производителю
         if (manufacturerId.HasValue)
         {
             query = query.Where(a => a.ManufacturerId == manufacturerId);
         }
-        
+
         // Фильтр по поиску
         if (!string.IsNullOrWhiteSpace(searchTerm))
         {
@@ -136,10 +133,10 @@ public class AccessoryRepository : Repository<Accessory>, IAccessoryRepository
                 (a.OrderNumber != null && EF.Functions.Like(a.OrderNumber, term))
             );
         }
-        
+
         // Считаем общее количество
         var totalCount = await query.CountAsync();
-        
+
         // Получаем страницу
         var accessories = await query
             .OrderBy(a => a.Name)
@@ -147,7 +144,7 @@ public class AccessoryRepository : Repository<Accessory>, IAccessoryRepository
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();
-        
+
         return (accessories, totalCount);
     }
 
@@ -160,11 +157,11 @@ public class AccessoryRepository : Repository<Accessory>, IAccessoryRepository
         var accessory = await _dbSet
             .AsNoTracking()
             .FirstOrDefaultAsync(a => a.Id == accessoryId);
-        
+
         if (accessory == null || accessory.DeletedAt != null)
             return false;
-        
-        return accessory.Requestable == true && accessory.Qty >= requestedQuantity;
+
+        return accessory.Requestable && accessory.Qty >= requestedQuantity;
     }
 
     /// <summary>
@@ -175,7 +172,7 @@ public class AccessoryRepository : Repository<Accessory>, IAccessoryRepository
         var accessory = await _dbSet
             .AsNoTracking()
             .FirstOrDefaultAsync(a => a.Id == accessoryId && a.DeletedAt == null);
-        
+
         return accessory?.Qty ?? 0;
     }
 
@@ -193,7 +190,7 @@ public class AccessoryRepository : Repository<Accessory>, IAccessoryRepository
                 a.Qty > 0 && // Не полностью закончились
                 (
                     (a.MinAmt.HasValue && a.Qty <= a.MinAmt.Value) ||
-                    (!a.MinAmt.HasValue && a.Qty < 5) // Default threshold
+                    (!a.MinAmt.HasValue && a.Qty < DefaultLowStockThreshold) // Default threshold
                 ))
             .OrderBy(a => a.Qty) // Сортируем по количеству (меньше первыми)
             .ToListAsync();
@@ -220,18 +217,18 @@ public class AccessoryRepository : Repository<Accessory>, IAccessoryRepository
     public async Task<bool> UpdateQuantityAsync(uint accessoryId, int quantityChange)
     {
         var accessory = await _dbSet.FindAsync(accessoryId);
-        
+
         if (accessory == null || accessory.DeletedAt != null)
             return false;
-        
+
         // Проверяем, что не уходим в минус
         var newQuantity = accessory.Qty + quantityChange;
         if (newQuantity < 0)
             return false;
-        
+
         accessory.Qty = newQuantity;
         accessory.UpdatedAt = DateTime.UtcNow;
-        
+
         // Update вызовется автоматически через EF Core change tracking
         return true;
     }
@@ -319,13 +316,13 @@ public class AccessoryRepository : Repository<Accessory>, IAccessoryRepository
                     join location in _context.Locations on accessory.LocationId equals (int?)location.Id into locationGroup
                     from location in locationGroup.DefaultIfEmpty()
                     where accessory.DeletedAt == null
-                    select new 
-                    { 
-                        accessory, 
-                        category, 
-                        manufacturer, 
-                        supplier, 
-                        location 
+                    select new
+                    {
+                        accessory,
+                        category,
+                        manufacturer,
+                        supplier,
+                        location
                     };
 
         // Фильтры
@@ -343,7 +340,7 @@ public class AccessoryRepository : Repository<Accessory>, IAccessoryRepository
         if (!string.IsNullOrWhiteSpace(searchTerm))
         {
             var search = $"%{searchTerm.Trim()}%";
-            query = query.Where(x => 
+            query = query.Where(x =>
                 (x.accessory.Name != null && EF.Functions.Like(x.accessory.Name, search)) ||
                 (x.accessory.ModelNumber != null && EF.Functions.Like(x.accessory.ModelNumber, search)));
         }
@@ -369,5 +366,9 @@ public class AccessoryRepository : Repository<Accessory>, IAccessoryRepository
 
         return (results, totalCount);
     }
-}
 
+    private static IQueryable<Accessory> ApplyAvailableAccessoryFilter(IQueryable<Accessory> query)
+    {
+        return query.Where(a => a.DeletedAt == null && a.Requestable && a.Qty > 0);
+    }
+}
