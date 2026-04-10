@@ -2,6 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using Microsoft.IdentityModel.Tokens;
 using WebShopMercantec.Configuration;
 using WebShopMercantec.Models;
@@ -114,12 +115,59 @@ public class TokenService : ITokenService
     /// </summary>
     private static string ResolveRole(User user)
     {
-        if (user.Permissions == null) return "User";
-        if (user.Permissions.Contains("\"superadmin\":\"1\"") ||
-            user.Permissions.Contains("\"superadmin\": \"1\"")) return "Admin";
-        if (user.Permissions.Contains("\"admin\":\"1\"") ||
-            user.Permissions.Contains("\"admin\": \"1\"")) return "Admin";
+        if (string.IsNullOrWhiteSpace(user.Permissions))
+            return "User";
+
+        if (TryResolveRoleFromPermissionsJson(user.Permissions, out var parsedRole))
+            return parsedRole;
+
+        if (user.Permissions.Contains("\"superadmin\":\"1\"", StringComparison.OrdinalIgnoreCase) ||
+            user.Permissions.Contains("\"superadmin\": \"1\"", StringComparison.OrdinalIgnoreCase) ||
+            user.Permissions.Contains("\"admin\":\"1\"", StringComparison.OrdinalIgnoreCase) ||
+            user.Permissions.Contains("\"admin\": \"1\"", StringComparison.OrdinalIgnoreCase))
+            return "Admin";
+
         return "User";
+    }
+
+    private static bool TryResolveRoleFromPermissionsJson(string permissionsJson, out string role)
+    {
+        role = "User";
+
+        try
+        {
+            using var doc = JsonDocument.Parse(permissionsJson);
+            var root = doc.RootElement;
+
+            if (IsTruthyPermission(root, "superadmin") || IsTruthyPermission(root, "admin"))
+            {
+                role = "Admin";
+                return true;
+            }
+
+            return false;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static bool IsTruthyPermission(JsonElement root, string propertyName)
+    {
+        if (!root.TryGetProperty(propertyName, out var value))
+            return false;
+
+        return value.ValueKind switch
+        {
+            JsonValueKind.True => true,
+            JsonValueKind.False => false,
+            JsonValueKind.Number => value.TryGetInt32(out var number) && number == 1,
+            JsonValueKind.String =>
+                string.Equals(value.GetString(), "1", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(value.GetString(), "true", StringComparison.OrdinalIgnoreCase),
+            _ => false
+        };
     }
 }
 

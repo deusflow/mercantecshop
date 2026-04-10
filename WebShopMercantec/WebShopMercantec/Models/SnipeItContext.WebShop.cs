@@ -14,6 +14,9 @@ public partial class SnipeItContext
 
     partial void OnModelCreatingPartial(ModelBuilder modelBuilder)
     {
+        // Environment-specific Snipe-IT schema uses singular table name.
+        modelBuilder.Entity<Asset>().ToTable("asset");
+
         modelBuilder.Entity<WebShopUserCredits>(entity =>
         {
             entity.ToTable("webshop_user_credits");
