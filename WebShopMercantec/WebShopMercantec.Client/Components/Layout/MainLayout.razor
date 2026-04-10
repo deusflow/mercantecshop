@@ -15,7 +15,11 @@
                 <AuthorizeView>
                     <Authorized>
                         <li><NavLink href="/user-profile" class="navbar-link">Profile</NavLink></li>
-                        <li><NavLink href="/admin/users" class="navbar-link">Admin Panel</NavLink></li>
+                        <AuthorizeView Roles="Admin,SuperAdmin">
+                            <Authorized Context="adminCtx">
+                                <li><NavLink href="/admin/users" class="navbar-link">Admin Panel</NavLink></li>
+                            </Authorized>
+                        </AuthorizeView>
                         <li>
                             <button class="navbar-link" style="background:none; border:none; padding:0; cursor:pointer;" @onclick="LogoutAsync">Log out</button>
                         </li>
