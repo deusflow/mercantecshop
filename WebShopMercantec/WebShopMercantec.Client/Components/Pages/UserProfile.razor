@@ -62,9 +62,35 @@
                         <span class="stat-value">@(_user.CreatedAt?.ToString("MMM yyyy") ?? "N/A")</span>
                     </div>
                 </div>
-                <button class="btn btn-secondary" style="width: 100%;">
-                    Edit Profile
-                </button>
+                
+                @if (!_isEditing)
+                {
+                    <button class="btn btn-secondary" style="width: 100%;" @onclick="EditProfile">
+                        Edit Profile
+                    </button>
+                }
+                else
+                {
+                    <div class="card mt-md" style="padding: 15px;">
+                        <h4 class="mb-sm">Edit Profile</h4>
+                        <div class="form-group mb-sm">
+                            <label>First Name</label>
+                            <input type="text" class="form-input w-100" @bind="_editModel.FirstName" />
+                        </div>
+                        <div class="form-group mb-md">
+                            <label>Last Name</label>
+                            <input type="text" class="form-input w-100" @bind="_editModel.LastName" />
+                        </div>
+                        <div class="flex gap-sm">
+                            <button class="btn btn-primary flex-1" @onclick="SaveProfileAsync" disabled="@_isSaving">
+                                @(_isSaving ? "Saving..." : "Save")
+                            </button>
+                            <button class="btn btn-secondary flex-1" @onclick="CancelEdit" disabled="@_isSaving">
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                }
             </div>
 
             <!-- ПРАВАЯ КОЛОНКА: ИСТОРИЯ ПОКУПОК -->
@@ -131,9 +157,75 @@
     private UserDto? _user;
     private List<TransactionDto>? _transactions;
 
+    private bool _isEditing = false;
+    private bool _isSaving = false;
+    private UserDto _editModel = new();
+
     protected override async Task OnInitializedAsync()
     {
         await LoadProfileDataAsync();
+    }
+
+    private void EditProfile()
+    {
+        if (_user != null)
+        {
+            _editModel = new UserDto 
+            { 
+                FirstName = _user.FirstName, 
+                LastName = _user.LastName 
+            };
+            _isEditing = true;
+        }
+    }
+
+    private void CancelEdit()
+    {
+        _isEditing = false;
+    }
+
+    private async Task SaveProfileAsync()
+    {
+        if (_user == null) return;
+        
+        _isSaving = true;
+        try
+        {
+            var updateDto = new UserDto
+            {
+                Id = _user.Id,
+                FirstName = _editModel.FirstName,
+                LastName = _editModel.LastName,
+                Email = _user.Email,
+                Username = _user.Username
+            };
+            
+            var response = await Http.PutAsJsonAsync("/api/Users/me", updateDto);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var updatedUser = await response.Content.ReadFromJsonAsync<UserDto>();
+                if (updatedUser != null)
+                {
+                    _user = updatedUser;
+                }
+                _isEditing = false;
+            }
+            else
+            {
+                // Optionally handle error message
+                var errorText = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"Save failed: {errorText}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error saving profile: {ex.Message}");
+        }
+        finally
+        {
+            _isSaving = false;
+        }
     }
 
     private async Task LoadProfileDataAsync()
@@ -171,4 +263,3 @@
         }
     }
 }
-

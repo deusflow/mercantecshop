@@ -90,6 +90,11 @@ public class UserDto
     
     public bool ShowInList { get; set; } = true;
 
+    // Status details
+    public int CheckedOutItemsCount { get; set; }
+    
+    public bool IsDebtor { get; set; }
+
     // VIP status (for special users)
     public bool Vip { get; set; } // Match model field name
     
@@ -108,4 +113,3 @@ public class UserDto
     
     public string? Website { get; set; }
 }
-

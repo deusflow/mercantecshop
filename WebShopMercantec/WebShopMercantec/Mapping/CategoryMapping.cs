@@ -19,6 +19,7 @@ public static class CategoryMapping
             Id = (int)category.Id,
             Name = category.Name,
             CategoryType = category.CategoryType,
+            ShowInCatalog = category.CheckinEmail,
             ItemsCount = itemsCount,
             Image = category.Image,
             CreatedAt = category.CreatedAt,
@@ -35,4 +36,3 @@ public static class CategoryMapping
         return categories.Select(c => MapToDto(c, getItemsCount?.Invoke(c.Id) ?? 0));
     }
 }
-

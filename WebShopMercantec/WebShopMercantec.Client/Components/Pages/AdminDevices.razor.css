@@ -1,0 +1,133 @@
+.add-device-card {
+    padding: 1.5rem;
+}
+
+.device-form-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.form-group label {
+    font-size: 0.92rem;
+    font-weight: 500;
+    color: var(--color-text-secondary);
+}
+
+.checkbox-group {
+    justify-content: center;
+}
+
+.checkbox-group label {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin-top: 1.55rem;
+}
+
+.devices-toolbar input {
+    max-width: 320px;
+}
+
+.status-select {
+    min-width: 180px;
+}
+
+.device-actions {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+}
+
+.category-visibility-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem;
+}
+
+.category-visibility-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.75rem;
+    border: 1px solid var(--color-surface-hover);
+    border-radius: 10px;
+    background: var(--color-surface);
+}
+
+.category-visibility-item.state-saved {
+    border-color: rgba(48, 209, 88, 0.5);
+}
+
+.category-visibility-item.state-dirty {
+    border-color: rgba(255, 159, 10, 0.6);
+}
+
+.category-visibility-item.state-failed {
+    border-color: rgba(255, 69, 58, 0.7);
+}
+
+.category-visibility-item.state-saving {
+    border-color: rgba(10, 132, 255, 0.6);
+}
+
+.category-visibility-item input {
+    margin-bottom: 0.2rem;
+}
+
+.category-visibility-item span {
+    font-weight: 600;
+}
+
+.category-visibility-item small {
+    color: var(--color-text-secondary);
+}
+
+.category-state {
+    font-size: 0.78rem;
+    font-weight: 600;
+}
+
+@media (max-width: 1024px) {
+    .device-form-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .category-visibility-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .device-form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .checkbox-group label {
+        margin-top: 0;
+    }
+
+    .devices-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
+    }
+
+    .devices-toolbar input {
+        max-width: 100%;
+    }
+
+    .device-actions {
+        flex-direction: column;
+    }
+
+    .category-visibility-grid {
+        grid-template-columns: 1fr;
+    }
+}

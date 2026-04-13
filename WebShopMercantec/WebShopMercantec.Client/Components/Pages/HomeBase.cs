@@ -13,16 +13,44 @@ public class HomeBase : ComponentBase, IDisposable
 
     public readonly CancellationTokenSource Cts = new();
     public readonly List<ProductDto> Items = new();
+    public readonly List<CategoryDto> Categories = new();
     public bool IsLoading;
     public string? Error;
     public int Page = 1;
     public int PageSize = 20;
     public int TotalPages = 1;
     public string SearchText = string.Empty;
+    public int? SelectedCategoryId;
 
     protected override async Task OnInitializedAsync()
     {
+        await LoadCategoriesAsync();
         await LoadAsync();
+    }
+
+    public async Task SelectCategoryAsync(int? categoryId)
+    {
+        SelectedCategoryId = categoryId;
+        Page = 1;
+        await LoadAsync();
+    }
+
+    private async Task LoadCategoriesAsync()
+    {
+        try
+        {
+            Categories.Clear();
+            var categories = await Http.GetFromJsonAsync<List<CategoryDto>>("/api/categories/catalog", Cts.Token);
+            if (categories != null)
+                Categories.AddRange(categories.OrderByDescending(c => c.ItemsCount).ThenBy(c => c.Name));
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            Error = ex.Message;
+        }
     }
 
     public async Task OnSearchKeyDown(KeyboardEventArgs args)
@@ -73,6 +101,9 @@ public class HomeBase : ComponentBase, IDisposable
         try
         {
             var url = $"/api/products/paged?page={Page}&pageSize={PageSize}&search={Uri.EscapeDataString(SearchText)}";
+            if (SelectedCategoryId.HasValue)
+                url += $"&categoryId={SelectedCategoryId.Value}";
+
             var response = await Http.GetFromJsonAsync<ProductsPagedResponse>(url, Cts.Token);
 
             if (response?.Items is not null)
@@ -126,4 +157,3 @@ public class HomeBase : ComponentBase, IDisposable
         public int TotalPages { get; set; }
     }
 }
-

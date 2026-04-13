@@ -9,7 +9,24 @@
 <!-- ЗАГОЛОВОК СТРАНИЦЫ -->
 <div class="page-header text-center fade-in">
     <h1>Find Your Next Gear</h1>
-    <p>The best equipment, available for you. Powered by credits.</p>
+    <p class="hero-subtitle">The best equipment, available for you. Powered by credits.</p>
+</div>
+
+<div class="categories-section mb-xl fade-in delay-1">
+    <div class="flex-between mb-md">
+        <h2>Categories</h2>
+        <button class="btn btn-secondary btn-small" @onclick="() => SelectCategoryAsync(null)">All Categories</button>
+    </div>
+    <div class="grid grid-4 category-grid">
+        @foreach (var category in Categories)
+        {
+            var selected = SelectedCategoryId == category.Id;
+            <button class="card category-card @(selected ? "category-active" : string.Empty)" disabled="@(category.ItemsCount == 0)" @onclick="() => SelectCategoryAsync(category.Id)">
+                <h3>@category.Name</h3>
+                <p>@category.ItemsCount product(s)</p>
+            </button>
+        }
+    </div>
 </div>
 
 <!-- ФИЛЬТРЫ И ПОИСК -->
@@ -42,7 +59,7 @@ else if (!string.IsNullOrWhiteSpace(Error))
 }
 else if (Items.Count == 0)
 {
-    <p>No products found.</p>
+    <p>No products found for selected category.</p>
 }
 else
 {
@@ -79,4 +96,3 @@ else
 
     private static string Describe(ProductDto item) => HomeBase.GetDescription(item);
 }
-

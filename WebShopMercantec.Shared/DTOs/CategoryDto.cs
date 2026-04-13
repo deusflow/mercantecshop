@@ -12,6 +12,9 @@ public class CategoryDto
     public string Name { get; set; } = string.Empty;
     
     public string? CategoryType { get; set; } // Match model field name: "asset", "accessory", "consumable", "component"
+
+    // WebShop flag: category is visible on catalog home cards.
+    public bool ShowInCatalog { get; set; }
     
     public int ItemsCount { get; set; } // How many products in this category
     

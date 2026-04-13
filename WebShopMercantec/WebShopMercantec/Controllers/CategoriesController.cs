@@ -97,5 +97,36 @@ public class CategoriesController : ControllerBase
         await _categoryService.DeleteCategoryAsync(id);
         return NoContent();
     }
-}
 
+    /// <summary>
+    /// Категории для витрины каталога (только asset, с учетом ShowInCatalog)
+    /// </summary>
+    [HttpGet("catalog")]
+    public async Task<ActionResult<IEnumerable<CategoryDto>>> GetCatalogCategories()
+    {
+        var categories = await _categoryService.GetCatalogCategoriesAsync(includeHidden: false);
+        return Ok(categories);
+    }
+
+    /// <summary>
+    /// Категории для админ-настроек витрины (все asset категории)
+    /// </summary>
+    [HttpGet("catalog-admin")]
+    [Authorize(Roles = "Admin,SuperAdmin")]
+    public async Task<ActionResult<IEnumerable<CategoryDto>>> GetCatalogCategoriesAdmin()
+    {
+        var categories = await _categoryService.GetCatalogCategoriesAsync(includeHidden: true);
+        return Ok(categories);
+    }
+
+    /// <summary>
+    /// Включить/выключить отображение категории на главной витрине
+    /// </summary>
+    [HttpPut("{id}/catalog-visibility")]
+    [Authorize(Roles = "Admin,SuperAdmin")]
+    public async Task<ActionResult> SetCatalogVisibility(int id, [FromBody] bool visible)
+    {
+        await _categoryService.SetCategoryVisibilityAsync(id, visible);
+        return NoContent();
+    }
+}

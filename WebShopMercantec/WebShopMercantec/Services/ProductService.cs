@@ -66,6 +66,20 @@ public class ProductService : IProductService
         return (products, totalCount);
     }
 
+    public async Task<(IEnumerable<ProductDto> Products, int TotalCount)> GetAdminProductsPagedAsync(
+        int pageNumber, int pageSize, string? searchTerm = null)
+    {
+        _logger.LogInformation(
+            "Getting admin paged products: Page={Page}, Size={Size}, Search={Search}",
+            pageNumber, pageSize, searchTerm);
+
+        var (assetsWithDetails, totalCount) = await _unitOfWork.Products.GetProductsPagedWithDetailsAsync(
+            pageNumber, pageSize, null, null, null, searchTerm, null, null, availableOnly: false);
+
+        var products = ProductMapping.MapFromDetailsList(assetsWithDetails).ToList();
+        return (products, totalCount);
+    }
+
     public async Task<IEnumerable<ProductDto>> GetProductsByCategoryAsync(int categoryId)
     {
         _logger.LogInformation("Getting products by category: {CategoryId}", categoryId);
@@ -93,6 +107,69 @@ public class ProductService : IProductService
         
         var assetsWithDetails = await _unitOfWork.Products.SearchProductsWithDetailsAsync(searchTerm);
         return ProductMapping.MapFromDetailsList(assetsWithDetails).ToList();
+    }
+
+    public async Task<ProductDto> ActivateProductAsync(int productId, int statusId)
+    {
+        _logger.LogInformation("Activating product: {ProductId} to status: {StatusId}", productId, statusId);
+        
+        var asset = await _unitOfWork.Products.GetByIdAsync((uint)productId);
+        if (asset == null || asset.DeletedAt != null)
+            throw new NotFoundException("Product", productId);
+            
+        asset.StatusId = statusId;
+        asset.UpdatedAt = DateTime.UtcNow;
+        
+        _unitOfWork.Products.Update(asset);
+        await _unitOfWork.SaveChangesAsync();
+        
+        return await GetProductByIdAsync(productId) ?? throw new InvalidOperationException("Failed to reload product");
+    }
+
+    public async Task<ProductDto> SetProductRequestableAsync(int productId, bool requestable)
+    {
+        var asset = await _unitOfWork.Products.GetByIdAsync((uint)productId);
+        if (asset == null || asset.DeletedAt != null)
+            throw new NotFoundException("Product", productId);
+
+        asset.Requestable = requestable ? (sbyte)1 : (sbyte)0;
+        asset.UpdatedAt = DateTime.UtcNow;
+
+        _unitOfWork.Products.Update(asset);
+        await _unitOfWork.SaveChangesAsync();
+
+        return await GetProductByIdAsync(productId) ?? throw new InvalidOperationException("Failed to reload product");
+    }
+
+    public async Task<ProductDto> CreateProductAsync(CreateDeviceDto dto)
+    {
+        if (string.IsNullOrWhiteSpace(dto.Name))
+            throw new BadRequestException("Device name is required");
+        if (string.IsNullOrWhiteSpace(dto.AssetTag))
+            throw new BadRequestException("Asset tag is required");
+
+        var normalizedTag = dto.AssetTag.Trim();
+        var duplicateTag = await _unitOfWork.Context.Assets.AnyAsync(a => a.DeletedAt == null && a.AssetTag == normalizedTag);
+        if (duplicateTag)
+            throw new BadRequestException($"Asset tag '{normalizedTag}' already exists");
+
+        var asset = new Asset
+        {
+            Name = dto.Name.Trim(),
+            AssetTag = normalizedTag,
+            ModelId = dto.ModelId,
+            StatusId = dto.StatusId,
+            PurchaseCost = dto.PurchaseCost,
+            Requestable = dto.Requestable ? (sbyte)1 : (sbyte)0,
+            Notes = dto.Notes,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+
+        await _unitOfWork.Products.AddAsync(asset);
+        await _unitOfWork.SaveChangesAsync();
+
+        return await GetProductByIdAsync((int)asset.Id) ?? throw new InvalidOperationException("Failed to load created device");
     }
 
     // === АКСЕССУАРЫ ===
@@ -150,4 +227,3 @@ public class ProductService : IProductService
         return await _unitOfWork.Accessories.IsAvailableAsync((uint)accessoryId, requestedQuantity);
     }
 }
-

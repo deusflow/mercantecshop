@@ -1,0 +1,450 @@
+@page "/admin/devices"
+@attribute [Authorize(Roles = "Admin,SuperAdmin")]
+@inject HttpClient Http
+@inject IJSRuntime Js
+
+<PageTitle>Device Management - TechShop Admin</PageTitle>
+
+<NavigationLock ConfirmExternalNavigation="@HasUnsavedCategoryChanges" OnBeforeInternalNavigation="HandleBeforeInternalNavigation" />
+
+<div class="admin-container fade-in">
+    <div class="page-header">
+        <h1>Device Management</h1>
+        <p>Add devices, change status, and control sale availability.</p>
+    </div>
+
+    <div class="card mb-xl add-device-card">
+        <h2 class="mb-md">Add New Device</h2>
+        @if (!string.IsNullOrWhiteSpace(_createError))
+        {
+            <div class="alert alert-danger mb-md">@_createError</div>
+        }
+
+        <div class="device-form-grid">
+            <div class="form-group">
+                <label>Device name</label>
+                <input class="form-input" placeholder="Device name" @bind="_newDevice.Name" />
+            </div>
+            <div class="form-group">
+                <label>Asset tag</label>
+                <input class="form-input" placeholder="Asset tag" @bind="_newDevice.AssetTag" />
+            </div>
+            <div class="form-group">
+                <label>Model ID (optional)</label>
+                <input class="form-input" type="number" placeholder="Model ID" @bind="_newDevice.ModelId" />
+            </div>
+            <div class="form-group">
+                <label>Purchase cost</label>
+                <input class="form-input" type="number" step="0.01" placeholder="Purchase cost" @bind="_newDevice.PurchaseCost" />
+            </div>
+            <div class="form-group">
+                <label>Status</label>
+                <select class="form-input" @bind="_newDevice.StatusId">
+                    @foreach (var status in _statusLabels)
+                    {
+                        <option value="@status.Id">@status.Name</option>
+                    }
+                </select>
+            </div>
+            <div class="form-group checkbox-group">
+                <label>
+                    <input type="checkbox" @bind="_newDevice.Requestable" />
+                    Available for sale/rent
+                </label>
+            </div>
+        </div>
+
+        <div class="form-group mt-md">
+            <label>Notes (optional)</label>
+            <textarea class="form-input" rows="3" placeholder="Notes" @bind="_newDevice.Notes"></textarea>
+        </div>
+
+        <div class="mt-md">
+            <button class="btn btn-primary" @onclick="CreateDeviceAsync" disabled="@_isSaving">@(_isSaving ? "Creating..." : "Add Device")</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="flex-between mb-md devices-toolbar">
+            <h2>All Devices</h2>
+            <input type="text" class="form-input" placeholder="Search devices..." @bind="_search" @bind:event="oninput" @onkeyup="HandleSearch" />
+        </div>
+
+        @if (_isLoading)
+        {
+            <p>Loading devices...</p>
+        }
+        else if (!string.IsNullOrWhiteSpace(_error))
+        {
+            <div class="alert alert-danger">@_error</div>
+        }
+        else if (_devices.Count == 0)
+        {
+            <p>No devices found.</p>
+        }
+        else
+        {
+            <div class="table-container">
+                <table class="table">
+                    <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Asset Tag</th>
+                        <th>Status</th>
+                        <th class="text-right">Price</th>
+                        <th class="text-center">Sale</th>
+                        <th class="text-right">Actions</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    @foreach (var device in _devices)
+                    {
+                        <tr>
+                            <td>@device.Id</td>
+                            <td>@device.Name</td>
+                            <td>@device.AssetTag</td>
+                            <td>
+                                <select class="form-input status-select" @bind="_selectedStatusByDevice[device.Id]">
+                                    @foreach (var status in _statusLabels)
+                                    {
+                                        <option value="@status.Id">@status.Name</option>
+                                    }
+                                </select>
+                            </td>
+                            <td class="text-right">@((device.Price).ToString("N0"))</td>
+                            <td class="text-center">
+                                <span class="badge @(device.Requestable ? "badge-success" : "badge-danger")">
+                                    @(device.Requestable ? "On" : "Off")
+                                </span>
+                            </td>
+                            <td class="text-right">
+                                <div class="device-actions">
+                                    <button class="btn btn-secondary btn-small" @onclick="() => SaveStatusAsync(device)">Save Status</button>
+                                    <button class="btn @(device.Requestable ? "btn-danger" : "btn-primary") btn-small" @onclick="() => ToggleSaleAsync(device)">
+                                        @(device.Requestable ? "Remove from sale" : "Add to sale")
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        }
+
+        @if (_totalPages > 1)
+        {
+            <div class="pagination mt-md">
+                <button class="btn btn-secondary btn-small" disabled="@(_page <= 1)" @onclick="PrevPage">Previous</button>
+                <span class="pagination-info">Page @_page of @_totalPages</span>
+                <button class="btn btn-secondary btn-small" disabled="@(_page >= _totalPages)" @onclick="NextPage">Next</button>
+            </div>
+        }
+    </div>
+
+    <div class="card mb-xl">
+        <div class="flex-between mb-md">
+            <h2>Catalog Category Windows</h2>
+            <button class="btn btn-primary btn-small" @onclick="SaveCategoryVisibilityAsync" disabled="@(_isSavingCategoryVisibility || !HasUnsavedCategoryChanges)">
+                @(_isSavingCategoryVisibility ? "Saving..." : "Save Visibility")
+            </button>
+        </div>
+        @if (!string.IsNullOrWhiteSpace(_categoryVisibilityMessage))
+        {
+            <div class="alert alert-info mb-md">@_categoryVisibilityMessage</div>
+        }
+        <div class="category-visibility-grid">
+            @foreach (var category in _catalogCategories)
+            {
+                <label class="category-visibility-item @GetCategoryStateClass(category.Id)">
+                    <input type="checkbox" checked="@GetCategoryVisibility(category.Id)" @onchange="e => OnCategoryVisibilityChanged(category.Id, e)" />
+                    <span>@category.Name</span>
+                    <small>@category.ItemsCount in stock</small>
+                    <small class="category-state">@GetCategoryStateText(category.Id)</small>
+                </label>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<ProductDto> _devices = new();
+    private List<StatusLabelDto> _statusLabels = new();
+    private readonly Dictionary<int, int> _selectedStatusByDevice = new();
+    private readonly Dictionary<int, bool> _categoryVisibility = new();
+    private readonly Dictionary<int, bool> _originalCategoryVisibility = new();
+    private readonly Dictionary<int, CategorySaveState> _categorySaveState = new();
+    private List<CategoryDto> _catalogCategories = new();
+
+    private CreateDeviceDto _newDevice = new();
+    private string _search = string.Empty;
+    private string? _error;
+    private string? _createError;
+    private bool _isLoading = true;
+    private bool _isSaving;
+    private int _page = 1;
+    private readonly int _pageSize = 20;
+    private int _totalPages = 1;
+    private bool _isSavingCategoryVisibility;
+    private string? _categoryVisibilityMessage;
+
+    private bool HasUnsavedCategoryChanges =>
+        _catalogCategories.Any(c =>
+            _categoryVisibility.TryGetValue(c.Id, out var current)
+            && _originalCategoryVisibility.TryGetValue(c.Id, out var original)
+            && current != original);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadStatusesAsync();
+        if (_statusLabels.Count > 0)
+            _newDevice.StatusId = _statusLabels[0].Id;
+
+        await LoadCatalogCategoriesForAdminAsync();
+        await LoadDevicesAsync();
+    }
+
+    private async Task LoadStatusesAsync()
+    {
+        var response = await Http.GetFromJsonAsync<List<StatusLabelDto>>("/api/StatusLabels");
+        _statusLabels = response ?? new List<StatusLabelDto>();
+    }
+
+    private async Task LoadDevicesAsync()
+    {
+        _isLoading = true;
+        _error = null;
+
+        try
+        {
+            var url = $"/api/Products/admin-paged?page={_page}&pageSize={_pageSize}";
+            if (!string.IsNullOrWhiteSpace(_search))
+                url += $"&search={Uri.EscapeDataString(_search)}";
+
+            var response = await Http.GetFromJsonAsync<PagedResponse<ProductDto>>(url);
+            if (response != null)
+            {
+                _devices = response.Items;
+                _totalPages = response.TotalPages;
+                _page = response.Page;
+                _selectedStatusByDevice.Clear();
+                foreach (var device in _devices)
+                {
+                    _selectedStatusByDevice[device.Id] = device.StatusId ?? _statusLabels.FirstOrDefault()?.Id ?? 0;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = $"Failed to load devices: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task CreateDeviceAsync()
+    {
+        _createError = null;
+        _isSaving = true;
+        try
+        {
+            var res = await Http.PostAsJsonAsync("/api/Products", _newDevice);
+            if (!res.IsSuccessStatusCode)
+            {
+                _createError = await res.Content.ReadAsStringAsync();
+                return;
+            }
+
+            _newDevice = new CreateDeviceDto { Requestable = true, StatusId = _statusLabels.FirstOrDefault()?.Id ?? 0 };
+            _page = 1;
+            await LoadDevicesAsync();
+        }
+        catch (Exception ex)
+        {
+            _createError = ex.Message;
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    private async Task SaveStatusAsync(ProductDto device)
+    {
+        if (!_selectedStatusByDevice.TryGetValue(device.Id, out var statusId))
+            return;
+
+        await Http.PutAsJsonAsync($"/api/Products/{device.Id}/activate", statusId);
+        await LoadDevicesAsync();
+    }
+
+    private async Task ToggleSaleAsync(ProductDto device)
+    {
+        var newValue = !device.Requestable;
+        await Http.PutAsJsonAsync($"/api/Products/{device.Id}/requestable", newValue);
+        await LoadDevicesAsync();
+    }
+
+    private async Task HandleSearch(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            _page = 1;
+            await LoadDevicesAsync();
+        }
+    }
+
+    private async Task NextPage()
+    {
+        if (_page >= _totalPages) return;
+        _page++;
+        await LoadDevicesAsync();
+    }
+
+    private async Task PrevPage()
+    {
+        if (_page <= 1) return;
+        _page--;
+        await LoadDevicesAsync();
+    }
+
+    private async Task LoadCatalogCategoriesForAdminAsync()
+    {
+        var categories = await Http.GetFromJsonAsync<List<CategoryDto>>("/api/Categories/catalog-admin");
+        _catalogCategories = categories ?? new List<CategoryDto>();
+
+        _categoryVisibility.Clear();
+        _originalCategoryVisibility.Clear();
+        _categorySaveState.Clear();
+        foreach (var category in _catalogCategories)
+        {
+            _categoryVisibility[category.Id] = category.ShowInCatalog;
+            _originalCategoryVisibility[category.Id] = category.ShowInCatalog;
+            _categorySaveState[category.Id] = CategorySaveState.Saved;
+        }
+    }
+
+    private bool GetCategoryVisibility(int categoryId)
+    {
+        return _categoryVisibility.TryGetValue(categoryId, out var value) && value;
+    }
+
+    private void OnCategoryVisibilityChanged(int categoryId, ChangeEventArgs args)
+    {
+        var selected = args.Value switch
+        {
+            bool b => b,
+            string s when bool.TryParse(s, out var parsed) => parsed,
+            _ => false
+        };
+        _categoryVisibility[categoryId] = selected;
+
+        if (_originalCategoryVisibility.TryGetValue(categoryId, out var original) && original == selected)
+            _categorySaveState[categoryId] = CategorySaveState.Saved;
+        else
+            _categorySaveState[categoryId] = CategorySaveState.Dirty;
+    }
+
+    private string GetCategoryStateText(int categoryId)
+    {
+        return _categorySaveState.GetValueOrDefault(categoryId, CategorySaveState.Saved) switch
+        {
+            CategorySaveState.Saving => "Saving...",
+            CategorySaveState.Saved => "Saved",
+            CategorySaveState.Dirty => "Not saved",
+            CategorySaveState.Failed => "Save failed",
+            _ => "Saved"
+        };
+    }
+
+    private string GetCategoryStateClass(int categoryId)
+    {
+        return _categorySaveState.GetValueOrDefault(categoryId, CategorySaveState.Saved) switch
+        {
+            CategorySaveState.Saving => "state-saving",
+            CategorySaveState.Saved => "state-saved",
+            CategorySaveState.Dirty => "state-dirty",
+            CategorySaveState.Failed => "state-failed",
+            _ => "state-saved"
+        };
+    }
+
+    private async ValueTask OnBeforeInternalNavigation(LocationChangingContext context)
+    {
+        if (!HasUnsavedCategoryChanges)
+            return;
+
+        var leaveAnyway = await Js.InvokeAsync<bool>("confirm", "You have unsaved category visibility changes. Leave anyway?");
+        if (!leaveAnyway)
+            context.PreventNavigation();
+    }
+
+    private Task HandleBeforeInternalNavigation(LocationChangingContext context)
+        => OnBeforeInternalNavigation(context).AsTask();
+
+    private async Task SaveCategoryVisibilityAsync()
+    {
+        _isSavingCategoryVisibility = true;
+        _categoryVisibilityMessage = null;
+
+        try
+        {
+            var hasChanges = false;
+            foreach (var category in _catalogCategories)
+            {
+                if (!_categoryVisibility.TryGetValue(category.Id, out var selected))
+                    continue;
+
+                if (!_originalCategoryVisibility.TryGetValue(category.Id, out var original) || selected == original)
+                    continue;
+
+                hasChanges = true;
+                _categorySaveState[category.Id] = CategorySaveState.Saving;
+                StateHasChanged();
+
+                var res = await Http.PutAsJsonAsync($"/api/Categories/{category.Id}/catalog-visibility", selected);
+                if (!res.IsSuccessStatusCode)
+                {
+                    _categorySaveState[category.Id] = CategorySaveState.Failed;
+                    _categoryVisibilityMessage = "Some categories were not saved. Please retry.";
+                    continue;
+                }
+
+                _originalCategoryVisibility[category.Id] = selected;
+                category.ShowInCatalog = selected;
+                _categorySaveState[category.Id] = CategorySaveState.Saved;
+            }
+
+            if (!hasChanges)
+                _categoryVisibilityMessage = "No changes to save.";
+            else if (string.IsNullOrWhiteSpace(_categoryVisibilityMessage))
+                _categoryVisibilityMessage = "Category visibility saved.";
+        }
+        catch (Exception ex)
+        {
+            _categoryVisibilityMessage = ex.Message;
+        }
+        finally
+        {
+            _isSavingCategoryVisibility = false;
+        }
+    }
+
+    private enum CategorySaveState
+    {
+        Saved,
+        Dirty,
+        Saving,
+        Failed
+    }
+
+    private sealed class PagedResponse<T>
+    {
+        public List<T> Items { get; set; } = new();
+        public int Page { get; set; }
+        public int TotalPages { get; set; }
+    }
+}

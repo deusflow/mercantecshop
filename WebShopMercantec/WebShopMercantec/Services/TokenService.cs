@@ -139,7 +139,9 @@ public class TokenService : ITokenService
             using var doc = JsonDocument.Parse(permissionsJson);
             var root = doc.RootElement;
 
-            if (IsTruthyPermission(root, "superadmin") || IsTruthyPermission(root, "admin"))
+            if (IsTruthyPermission(root, "superadmin") ||
+                IsTruthyPermission(root, "superuser") ||
+                IsTruthyPermission(root, "admin"))
             {
                 role = "Admin";
                 return true;

@@ -1,0 +1,107 @@
+diff --git a/TODAY_CONTEXT_2026-03-25.md b/TODAY_CONTEXT_2026-03-25.md
+index f30f50e..623ab73 100644
+--- a/TODAY_CONTEXT_2026-03-25.md
++++ b/TODAY_CONTEXT_2026-03-25.md
+@@ -21,7 +21,36 @@
+   - `GET /WebShopMercantec.styles.css` -> **200**
+   - `GET /` serves updated `index.html` with corrected links.
+ 
+-## 2) Commit(s) made today
++## 2) Boot JSON fix (Unexpected end of JSON input)
++
++### Problem observed
++- Browser startup error:
++  - `Failed to load config file ./blazor.boot.json`
++  - `Unexpected end of JSON input`
++- Repro detail:
++  - `GET /_framework/blazor.boot.json` without `Accept-Encoding` returned normal JSON.
++  - With `Accept-Encoding: gzip` (browser behavior) server returned `200` with **empty body**.
++
++### Root cause
++- Static assets were served via `MapStaticAssets()` in current setup, and compressed asset negotiation produced empty response for `blazor.boot.json`.
++
++### Fix made
++- Updated `WebShopMercantec/WebShopMercantec/Program.cs` to hosted WASM static pipeline:
++  - Added `app.UseBlazorFrameworkFiles();`
++  - Kept `app.UseStaticFiles();`
++  - Removed `app.MapStaticAssets();`
++- Updated `WebShopMercantec/WebShopMercantec/WebShopMercantec.csproj`:
++  - Added package `Microsoft.AspNetCore.Components.WebAssembly.Server` (v9.0.0).
++
++### Verification done
++- Build: `dotnet build WebShopMercantec/WebShopMercantec/WebShopMercantec.csproj -v minimal` -> **succeeded**
++- HTTP checks:
++  - `GET /_framework/blazor.boot.json` + `Accept-Encoding: gzip` -> **200**, non-empty, `Content-Encoding: gzip`
++  - `GET /` -> **200**
++  - `GET /_framework/blazor.webassembly.js` -> **200**
++  - `GET /WebShopMercantec.styles.css` -> **200**
++
++## 3) Commit(s) made today
+ 
+ `git log --since="2026-03-25 00:00" --name-status`
+ 
+@@ -41,27 +70,26 @@
+     - `WebShopMercantec/WebShopMercantec/Services/CreditService.cs`
+     - `WebShopMercantec/WebShopMercantec/Services/IAuthService.cs`
+ 
+-## 3) Current workspace change state (full transfer artifacts)
++## 4) Current workspace change state (full transfer artifacts)
+ 
+ - Branch: `oleh-dev`
+ - Full tracked diff artifact: `TODAY_CHANGES_2026-03-25.patch`
+   - Generated from: `git diff --binary HEAD`
+-  - Size: `3140` lines
++  - Size: `3140` lines (at generation time)
+ - Untracked files list: `TODAY_UNTRACKED_2026-03-25.txt`
+ 
+ These two files are the recommended bundle to pass another AI:
+ 1. `TODAY_CHANGES_2026-03-25.patch`
+ 2. `TODAY_UNTRACKED_2026-03-25.txt`
+ 
+-## 4) Current untracked files
++## 5) Current untracked files
+ 
+ From `TODAY_UNTRACKED_2026-03-25.txt`:
+ - `TODAY_CHANGES_2026-03-25.patch`
+ - `TODAY_UNTRACKED_2026-03-25.txt`
+ - `WebShopMercantec/WebShopMercantec/logs/webshop-20260325.txt`
+ 
+-## 5) Notes
++## 6) Notes
+ 
+ - This context file is a compact navigator.
+ - The patch file contains the complete line-level tracked changes relative to `HEAD` at generation time.
+-
+diff --git a/WebShopMercantec/WebShopMercantec/Program.cs b/WebShopMercantec/WebShopMercantec/Program.cs
+index c573492..1ead8b5 100644
+--- a/WebShopMercantec/WebShopMercantec/Program.cs
++++ b/WebShopMercantec/WebShopMercantec/Program.cs
+@@ -179,14 +179,14 @@ public class Program
+             app.UseCors("WebShopPolicy");
+             app.UseRateLimiter();
+ 
++            // Hosted WASM static assets (_framework, app files, scoped css)
++            app.UseBlazorFrameworkFiles();
+             app.UseStaticFiles();
+ 
+             app.UseAuthentication();
+             app.UseAuthorization();
+             
+             app.UseAntiforgery();
+-
+-            app.MapStaticAssets();
+             
+             app.MapControllers();
+             
+diff --git a/WebShopMercantec/WebShopMercantec/WebShopMercantec.csproj b/WebShopMercantec/WebShopMercantec/WebShopMercantec.csproj
+index a9826d9..7c61d70 100644
+--- a/WebShopMercantec/WebShopMercantec/WebShopMercantec.csproj
++++ b/WebShopMercantec/WebShopMercantec/WebShopMercantec.csproj
+@@ -11,6 +11,7 @@
+     <ItemGroup>
+         <PackageReference Include="FluentValidation" Version="12.1.1" />
+         <PackageReference Include="FluentValidation.AspNetCore" Version="11.3.1" />
++        <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="9.0.0" />
+         <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.0">
+           <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+           <PrivateAssets>all</PrivateAssets>

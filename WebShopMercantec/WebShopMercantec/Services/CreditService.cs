@@ -32,70 +32,78 @@ public class CreditService : ICreditService
     {
         if (amount <= 0) throw new BadRequestException("Credit amount must be positive");
 
-        var ownsTransaction = _unitOfWork.Context.Database.CurrentTransaction == null;
-        if (ownsTransaction)
-            await _unitOfWork.BeginTransactionAsync();
-
-        try
+        var strategy = _unitOfWork.Context.Database.CreateExecutionStrategy();
+        return await strategy.ExecuteAsync(async () =>
         {
-            var credits = await GetOrCreateCreditsAsync(userId);
-            var before = credits.AvailableCredits;
-
-            credits.AvailableCredits += amount;
-            credits.UpdatedAt = DateTime.UtcNow;
-            _unitOfWork.Context.WebShopUserCredits.Update(credits);
-
-            var tx = await RecordTransactionAsync(userId, amount, "credit", reason, before, credits.AvailableCredits, relatedOrderId);
-            await _unitOfWork.SaveChangesAsync();
+            var ownsTransaction = _unitOfWork.Context.Database.CurrentTransaction == null;
             if (ownsTransaction)
-                await _unitOfWork.CommitTransactionAsync();
+                await _unitOfWork.BeginTransactionAsync();
 
-            _logger.LogInformation("Added {Amount} credits to user {UserId}. Balance: {Balance}", amount, userId, credits.AvailableCredits);
-            return MapTransaction(tx);
-        }
-        catch
-        {
-            if (ownsTransaction)
-                await _unitOfWork.RollbackTransactionAsync();
-            throw;
-        }
+            try
+            {
+                var credits = await GetOrCreateCreditsAsync(userId);
+                var before = credits.AvailableCredits;
+
+                credits.AvailableCredits += amount;
+                credits.UpdatedAt = DateTime.UtcNow;
+                _unitOfWork.Context.WebShopUserCredits.Update(credits);
+
+                var tx = await RecordTransactionAsync(userId, amount, "credit", reason, before, credits.AvailableCredits, relatedOrderId);
+                await _unitOfWork.SaveChangesAsync();
+                if (ownsTransaction)
+                    await _unitOfWork.CommitTransactionAsync();
+
+                _logger.LogInformation("Added {Amount} credits to user {UserId}. Balance: {Balance}", amount, userId, credits.AvailableCredits);
+                return MapTransaction(tx);
+            }
+            catch
+            {
+                if (ownsTransaction)
+                    await _unitOfWork.RollbackTransactionAsync();
+                throw;
+            }
+        });
     }
 
     public async Task<TransactionDto> DeductCreditsAsync(uint userId, decimal amount, string reason, int? relatedOrderId = null)
     {
         if (amount <= 0) throw new BadRequestException("Debit amount must be positive");
 
-        var ownsTransaction = _unitOfWork.Context.Database.CurrentTransaction == null;
-        if (ownsTransaction)
-            await _unitOfWork.BeginTransactionAsync();
-
-        try
+        var strategy = _unitOfWork.Context.Database.CreateExecutionStrategy();
+        return await strategy.ExecuteAsync(async () =>
         {
-            var credits = await GetOrCreateCreditsAsync(userId);
-
-            if (credits.AvailableCredits < amount)
-                throw new InsufficientCreditsException(amount, credits.AvailableCredits);
-
-            var before = credits.AvailableCredits;
-            credits.AvailableCredits -= amount;
-            credits.TotalSpent += amount;
-            credits.UpdatedAt = DateTime.UtcNow;
-            _unitOfWork.Context.WebShopUserCredits.Update(credits);
-
-            var tx = await RecordTransactionAsync(userId, -amount, "debit", reason, before, credits.AvailableCredits, relatedOrderId);
-            await _unitOfWork.SaveChangesAsync();
+            var ownsTransaction = _unitOfWork.Context.Database.CurrentTransaction == null;
             if (ownsTransaction)
-                await _unitOfWork.CommitTransactionAsync();
+                await _unitOfWork.BeginTransactionAsync();
 
-            _logger.LogInformation("Deducted {Amount} credits from user {UserId}. Balance: {Balance}", amount, userId, credits.AvailableCredits);
-            return MapTransaction(tx);
-        }
-        catch
-        {
-            if (ownsTransaction)
-                await _unitOfWork.RollbackTransactionAsync();
-            throw;
-        }
+            try
+            {
+                var credits = await GetOrCreateCreditsAsync(userId);
+
+                if (credits.AvailableCredits < amount)
+                    throw new InsufficientCreditsException(amount, credits.AvailableCredits);
+
+                var before = credits.AvailableCredits;
+                credits.AvailableCredits -= amount;
+                credits.TotalSpent += amount;
+                credits.UpdatedAt = DateTime.UtcNow;
+                _unitOfWork.Context.WebShopUserCredits.Update(credits);
+
+                var tx = await RecordTransactionAsync(userId, -amount, "debit", reason, before, credits.AvailableCredits, relatedOrderId);
+                await _unitOfWork.SaveChangesAsync();
+                if (ownsTransaction)
+                    await _unitOfWork.CommitTransactionAsync();
+
+                _logger.LogInformation("Deducted {Amount} credits from user {UserId}. Balance: {Balance}", amount, userId, credits.AvailableCredits);
+                return MapTransaction(tx);
+            }
+            catch
+            {
+                if (ownsTransaction)
+                    await _unitOfWork.RollbackTransactionAsync();
+                throw;
+            }
+        });
     }
 
     public async Task<IEnumerable<TransactionDto>> GetTransactionHistoryAsync(uint userId, int page = 1, int pageSize = 20)

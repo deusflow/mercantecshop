@@ -12,7 +12,17 @@ public interface ICategoryService
     /// Получить все активные категории
     /// </summary>
     Task<IEnumerable<CategoryDto>> GetAllCategoriesAsync();
-    
+
+    /// <summary>
+    /// Получить категории для каталога (asset) с доступным количеством.
+    /// </summary>
+    Task<IEnumerable<CategoryDto>> GetCatalogCategoriesAsync(bool includeHidden = false);
+
+    /// <summary>
+    /// Изменить видимость категории в каталоге.
+    /// </summary>
+    Task SetCategoryVisibilityAsync(int categoryId, bool visible);
+
     /// <summary>
     /// Получить категорию по ID
     /// </summary>
@@ -38,4 +48,3 @@ public interface ICategoryService
     /// </summary>
     Task DeleteCategoryAsync(int id);
 }
-

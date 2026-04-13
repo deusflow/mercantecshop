@@ -71,3 +71,10 @@ dump.txt
 
 # Mac / Linux
 .DS_Store
+
+# Local learning/testing artifacts
+WebShopMercantec/WebShopMercantec/test_bd/
+WebShopMercantec/WebShopMercantec/logs/
+
+# Local notes/docs (all markdown should be stored here)
+notes-local/

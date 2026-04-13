@@ -43,6 +43,39 @@ public class ProductsController : ControllerBase
     }
 
     /// <summary>
+    /// Активировать продукт / изменить статус [Admin only]
+    /// </summary>
+    [HttpPut("{id}/activate")]
+    [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin,SuperAdmin")]
+    public async Task<ActionResult<ProductDto>> ActivateProduct(int id, [FromBody] int statusId)
+    {
+        var product = await _productService.ActivateProductAsync(id, statusId);
+        return Ok(product);
+    }
+
+    /// <summary>
+    /// Добавить новое устройство [Admin only]
+    /// </summary>
+    [HttpPost]
+    [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin,SuperAdmin")]
+    public async Task<ActionResult<ProductDto>> CreateProduct([FromBody] CreateDeviceDto dto)
+    {
+        var product = await _productService.CreateProductAsync(dto);
+        return Ok(product);
+    }
+
+    /// <summary>
+    /// Включить/выключить устройство в продаже (requestable) [Admin only]
+    /// </summary>
+    [HttpPut("{id}/requestable")]
+    [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin,SuperAdmin")]
+    public async Task<ActionResult<ProductDto>> SetRequestable(int id, [FromBody] bool requestable)
+    {
+        var product = await _productService.SetProductRequestableAsync(id, requestable);
+        return Ok(product);
+    }
+
+    /// <summary>
     /// Получить продукты с пагинацией и фильтрами
     /// GET /api/products/paged?page=1&amp;pageSize=20&amp;categoryId=3&amp;search=laptop
     /// </summary>
@@ -58,6 +91,29 @@ public class ProductsController : ControllerBase
     {
         var (products, totalCount) = await _productService.GetProductsPagedAsync(
             page, pageSize, categoryId, manufacturerId, search, minPrice, maxPrice);
+
+        return Ok(new
+        {
+            items = products,
+            totalCount,
+            page,
+            pageSize,
+            totalPages = (int)Math.Ceiling(totalCount / (double)pageSize)
+        });
+    }
+
+    /// <summary>
+    /// Получить продукты с пагинацией для админа (включает недоступные)
+    /// GET /api/products/admin-paged?page=1&amp;pageSize=20
+    /// </summary>
+    [HttpGet("admin-paged")]
+    [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin,SuperAdmin")]
+    public async Task<ActionResult> GetAdminProductsPaged(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        [FromQuery] string? search = null)
+    {
+        var (products, totalCount) = await _productService.GetAdminProductsPagedAsync(page, pageSize, search);
 
         return Ok(new
         {

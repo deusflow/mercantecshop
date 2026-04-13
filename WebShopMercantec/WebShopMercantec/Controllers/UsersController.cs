@@ -61,9 +61,10 @@ public class UsersController : ControllerBase
     public async Task<ActionResult> GetAll(
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20,
-        [FromQuery] string? search = null)
+        [FromQuery] string? search = null,
+        [FromQuery] string? filter = null)
     {
-        var (users, total) = await _userService.GetUsersPagedAsync(page, pageSize, search);
+        var (users, total) = await _userService.GetUsersPagedAsync(page, pageSize, search, filter);
         return Ok(new
         {
             items = users,
@@ -72,6 +73,37 @@ public class UsersController : ControllerBase
             pageSize,
             totalPages = (int)Math.Ceiling(total / (double)pageSize)
         });
+    }
+
+    /// <summary>Get admin statistics [Admin only]</summary>
+    [HttpGet("stats")]
+    [Authorize(Roles = "Admin")]
+    public async Task<ActionResult<AdminStatsDto>> GetStats()
+    {
+        var stats = await _userService.GetAdminStatsAsync();
+        return Ok(stats);
+    }
+
+    /// <summary>Add credits to user [Admin only]</summary>
+    [HttpPost("{id}/add-credits")]
+    [Authorize(Roles = "Admin")]
+    public async Task<ActionResult> AddCredits(int id, [FromBody] decimal amount)
+    {
+        if (amount <= 0) return BadRequest("Amount must be greater than zero.");
+        
+        var tx = await _creditService.AddCreditsAsync((uint)id, amount, "Admin added credits", null);
+        return Ok(tx);
+    }
+
+    /// <summary>Deduct credits from user [Admin only]</summary>
+    [HttpPost("{id}/deduct-credits")]
+    [Authorize(Roles = "Admin")]
+    public async Task<ActionResult> DeductCredits(int id, [FromBody] decimal amount)
+    {
+        if (amount <= 0) return BadRequest("Amount must be greater than zero.");
+        
+        var tx = await _creditService.DeductCreditsAsync((uint)id, amount, "Admin deducted credits", null);
+        return Ok(tx);
     }
 
     /// <summary>Get current user's credit balance</summary>
@@ -94,4 +126,3 @@ public class UsersController : ControllerBase
         return Ok(txs);
     }
 }
-

@@ -40,6 +40,45 @@ public class CategoryService : ICategoryService
         return categoryDtos;
     }
 
+    public async Task<IEnumerable<CategoryDto>> GetCatalogCategoriesAsync(bool includeHidden = false)
+    {
+        var categories = await _unitOfWork.Context.Categories
+            .AsNoTracking()
+            .Where(c => c.DeletedAt == null && c.CategoryType == "asset")
+            .OrderBy(c => c.Name)
+            .ToListAsync();
+
+        var availableCounts = await GetAvailableAssetCountsByCategoryAsync();
+
+        var mapped = categories
+            .Select(c => CategoryMapping.MapToDto(c, availableCounts.GetValueOrDefault(c.Id, 0)))
+            .ToList();
+
+        if (includeHidden)
+            return mapped;
+
+        var explicitlyVisible = mapped.Where(c => c.ShowInCatalog).ToList();
+        if (explicitlyVisible.Count > 0)
+            return explicitlyVisible;
+
+        // Backward-compatible fallback: if no explicit flags were saved yet,
+        // show only categories that currently have at least one available device.
+        return mapped.Where(c => c.ItemsCount > 0).ToList();
+    }
+
+    public async Task SetCategoryVisibilityAsync(int categoryId, bool visible)
+    {
+        var category = await _unitOfWork.Categories.GetByIdAsync((uint)categoryId);
+        if (category == null || category.DeletedAt != null)
+            throw new NotFoundException("Category", categoryId);
+
+        category.CheckinEmail = visible;
+        category.UpdatedAt = DateTime.UtcNow;
+
+        _unitOfWork.Categories.Update(category);
+        await _unitOfWork.SaveChangesAsync();
+    }
+
     /// <summary>
     /// Получить категорию по ID
     /// </summary>
@@ -91,7 +130,7 @@ public class CategoryService : ICategoryService
             UpdatedAt = DateTime.UtcNow,
             UseDefaultEula = false,
             RequireAcceptance = false,
-            CheckinEmail = false
+            CheckinEmail = categoryDto.ShowInCatalog
         };
         
         await _unitOfWork.Categories.AddAsync(category);
@@ -120,6 +159,7 @@ public class CategoryService : ICategoryService
         category.Name = categoryDto.Name;
         category.CategoryType = categoryDto.CategoryType;
         category.Image = categoryDto.Image;
+        category.CheckinEmail = categoryDto.ShowInCatalog;
         category.UpdatedAt = DateTime.UtcNow;
         
         _unitOfWork.Categories.Update(category);
@@ -155,5 +195,24 @@ public class CategoryService : ICategoryService
         
         _logger.LogInformation("Category deleted: {CategoryId}", id);
     }
-}
 
+    private async Task<Dictionary<uint, int>> GetAvailableAssetCountsByCategoryAsync()
+    {
+        return await (
+            from model in _unitOfWork.Context.Models.AsNoTracking()
+            where model.DeletedAt == null && model.CategoryId.HasValue && model.Requestable == 1
+            join asset in _unitOfWork.Context.Assets.AsNoTracking()
+                on (int?)model.Id equals asset.ModelId
+            join status in _unitOfWork.Context.StatusLabels.AsNoTracking()
+                on asset.StatusId equals (int?)status.Id
+            where asset.DeletedAt == null
+                  && asset.AssignedTo == null
+                  && asset.Requestable == 1
+                  && status.DeletedAt == null
+                  && status.Deployable
+            group asset by (uint)model.CategoryId!.Value
+            into g
+            select new { CategoryId = g.Key, Count = g.Count() }
+        ).ToDictionaryAsync(x => x.CategoryId, x => x.Count);
+    }
+}
