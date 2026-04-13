@@ -13,7 +13,7 @@
 </div>
 
 <div class="categories-section mb-xl fade-in delay-1">
-    <div class="flex-between mb-md">
+    <div class="categories-header mb-md">
         <h2>Categories</h2>
         <button class="btn btn-secondary btn-small" @onclick="() => SelectCategoryAsync(null)">All Categories</button>
     </div>
@@ -63,7 +63,7 @@ else if (Items.Count == 0)
 }
 else
 {
-    <div class="grid grid-4">
+    <div class="grid grid-4 products-grid">
         @foreach (var item in Items)
         {
             <div class="card product-card fade-in-item">

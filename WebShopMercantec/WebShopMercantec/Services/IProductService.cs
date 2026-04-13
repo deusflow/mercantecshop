@@ -18,7 +18,7 @@ public interface IProductService
         decimal? minPrice = null, decimal? maxPrice = null);
         
     Task<(IEnumerable<ProductDto> Products, int TotalCount)> GetAdminProductsPagedAsync(
-        int pageNumber, int pageSize, string? searchTerm = null);
+        int pageNumber, int pageSize, string? searchTerm = null, int? categoryId = null, bool? hasPrice = null);
     
     Task<IEnumerable<ProductDto>> GetProductsByCategoryAsync(int categoryId);
     Task<IEnumerable<ProductDto>> GetProductsByManufacturerAsync(int manufacturerId);
@@ -26,6 +26,7 @@ public interface IProductService
     
     Task<ProductDto> ActivateProductAsync(int productId, int statusId);
     Task<ProductDto> SetProductRequestableAsync(int productId, bool requestable);
+    Task<ProductDto> SetProductPriceAsync(int productId, decimal price);
     Task<ProductDto> CreateProductAsync(CreateDeviceDto dto);
 
     // === АКСЕССУАРЫ ===

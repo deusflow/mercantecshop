@@ -76,6 +76,17 @@ public class ProductsController : ControllerBase
     }
 
     /// <summary>
+    /// Установить цену устройства (использует assets.purchase_cost) [Admin only]
+    /// </summary>
+    [HttpPut("{id}/price")]
+    [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin,SuperAdmin")]
+    public async Task<ActionResult<ProductDto>> SetPrice(int id, [FromBody] UpdateProductPriceDto dto)
+    {
+        var product = await _productService.SetProductPriceAsync(id, dto.Price);
+        return Ok(product);
+    }
+
+    /// <summary>
     /// Получить продукты с пагинацией и фильтрами
     /// GET /api/products/paged?page=1&amp;pageSize=20&amp;categoryId=3&amp;search=laptop
     /// </summary>
@@ -111,9 +122,11 @@ public class ProductsController : ControllerBase
     public async Task<ActionResult> GetAdminProductsPaged(
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20,
-        [FromQuery] string? search = null)
+        [FromQuery] string? search = null,
+        [FromQuery] int? categoryId = null,
+        [FromQuery] bool? hasPrice = null)
     {
-        var (products, totalCount) = await _productService.GetAdminProductsPagedAsync(page, pageSize, search);
+        var (products, totalCount) = await _productService.GetAdminProductsPagedAsync(page, pageSize, search, categoryId, hasPrice);
 
         return Ok(new
         {

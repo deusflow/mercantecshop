@@ -67,7 +67,23 @@
     <div class="card">
         <div class="flex-between mb-md devices-toolbar">
             <h2>All Devices</h2>
-            <input type="text" class="form-input" placeholder="Search devices..." @bind="_search" @bind:event="oninput" @onkeyup="HandleSearch" />
+            <div class="devices-filters">
+                <select class="form-input filter-select" value="@(_selectedCategoryFilter?.ToString() ?? string.Empty)" @onchange="OnCategoryFilterChanged">
+                    <option value="">All categories</option>
+                    @foreach (var category in _catalogCategories.OrderBy(c => c.Name))
+                    {
+                        <option value="@category.Id">@category.Name</option>
+                    }
+                </select>
+
+                <select class="form-input filter-select" value="@_priceFilter" @onchange="OnPriceFilterChanged">
+                    <option value="all">All prices</option>
+                    <option value="with">With price</option>
+                    <option value="without">Without price</option>
+                </select>
+
+                <input type="text" class="form-input filter-search" placeholder="Search devices..." @bind="_search" @bind:event="oninput" @onkeyup="HandleSearch" />
+            </div>
         </div>
 
         @if (_isLoading)
@@ -112,7 +128,9 @@
                                     }
                                 </select>
                             </td>
-                            <td class="text-right">@((device.Price).ToString("N0"))</td>
+                            <td class="text-right price-cell">
+                                <input class="form-input price-input" type="number" min="0" step="0.01" @bind="_selectedPriceByDevice[device.Id]" />
+                            </td>
                             <td class="text-center">
                                 <span class="badge @(device.Requestable ? "badge-success" : "badge-danger")">
                                     @(device.Requestable ? "On" : "Off")
@@ -121,6 +139,7 @@
                             <td class="text-right">
                                 <div class="device-actions">
                                     <button class="btn btn-secondary btn-small" @onclick="() => SaveStatusAsync(device)">Save Status</button>
+                                    <button class="btn btn-secondary btn-small" @onclick="() => SavePriceAsync(device)">Save Price</button>
                                     <button class="btn @(device.Requestable ? "btn-danger" : "btn-primary") btn-small" @onclick="() => ToggleSaleAsync(device)">
                                         @(device.Requestable ? "Remove from sale" : "Add to sale")
                                     </button>
@@ -154,16 +173,30 @@
         {
             <div class="alert alert-info mb-md">@_categoryVisibilityMessage</div>
         }
-        <div class="category-visibility-grid">
-            @foreach (var category in _catalogCategories)
-            {
-                <label class="category-visibility-item @GetCategoryStateClass(category.Id)">
-                    <input type="checkbox" checked="@GetCategoryVisibility(category.Id)" @onchange="e => OnCategoryVisibilityChanged(category.Id, e)" />
-                    <span>@category.Name</span>
-                    <small>@category.ItemsCount in stock</small>
-                    <small class="category-state">@GetCategoryStateText(category.Id)</small>
-                </label>
-            }
+        <div class="table-container">
+            <table class="table category-table">
+                <thead>
+                <tr>
+                    <th class="text-center">Show</th>
+                    <th>Category</th>
+                    <th class="text-right">In Stock</th>
+                    <th class="text-right">State</th>
+                </tr>
+                </thead>
+                <tbody>
+                @foreach (var category in _catalogCategories)
+                {
+                    <tr class="category-row @GetCategoryStateClass(category.Id)">
+                        <td class="text-center">
+                            <input type="checkbox" class="apple-checkbox" checked="@GetCategoryVisibility(category.Id)" @onchange="e => OnCategoryVisibilityChanged(category.Id, e)" />
+                        </td>
+                        <td><span class="category-name">@category.Name</span></td>
+                        <td class="text-right"><span class="category-stock">@category.ItemsCount</span></td>
+                        <td class="text-right"><span class="badge category-badge">@GetCategoryStateText(category.Id)</span></td>
+                    </tr>
+                }
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
@@ -172,6 +205,7 @@
     private List<ProductDto> _devices = new();
     private List<StatusLabelDto> _statusLabels = new();
     private readonly Dictionary<int, int> _selectedStatusByDevice = new();
+    private readonly Dictionary<int, decimal> _selectedPriceByDevice = new();
     private readonly Dictionary<int, bool> _categoryVisibility = new();
     private readonly Dictionary<int, bool> _originalCategoryVisibility = new();
     private readonly Dictionary<int, CategorySaveState> _categorySaveState = new();
@@ -188,6 +222,8 @@
     private int _totalPages = 1;
     private bool _isSavingCategoryVisibility;
     private string? _categoryVisibilityMessage;
+    private int? _selectedCategoryFilter;
+    private string _priceFilter = "all";
 
     private bool HasUnsavedCategoryChanges =>
         _catalogCategories.Any(c =>
@@ -221,6 +257,12 @@
             var url = $"/api/Products/admin-paged?page={_page}&pageSize={_pageSize}";
             if (!string.IsNullOrWhiteSpace(_search))
                 url += $"&search={Uri.EscapeDataString(_search)}";
+            if (_selectedCategoryFilter.HasValue)
+                url += $"&categoryId={_selectedCategoryFilter.Value}";
+            if (_priceFilter == "with")
+                url += "&hasPrice=true";
+            else if (_priceFilter == "without")
+                url += "&hasPrice=false";
 
             var response = await Http.GetFromJsonAsync<PagedResponse<ProductDto>>(url);
             if (response != null)
@@ -229,9 +271,11 @@
                 _totalPages = response.TotalPages;
                 _page = response.Page;
                 _selectedStatusByDevice.Clear();
+                _selectedPriceByDevice.Clear();
                 foreach (var device in _devices)
                 {
                     _selectedStatusByDevice[device.Id] = device.StatusId ?? _statusLabels.FirstOrDefault()?.Id ?? 0;
+                    _selectedPriceByDevice[device.Id] = device.Price;
                 }
             }
         }
@@ -288,6 +332,21 @@
         await LoadDevicesAsync();
     }
 
+    private async Task SavePriceAsync(ProductDto device)
+    {
+        if (!_selectedPriceByDevice.TryGetValue(device.Id, out var selectedPrice))
+            return;
+
+        var response = await Http.PutAsJsonAsync($"/api/Products/{device.Id}/price", new UpdateProductPriceDto { Price = selectedPrice });
+        if (!response.IsSuccessStatusCode)
+        {
+            _error = $"Failed to save price for device #{device.Id}";
+            return;
+        }
+
+        await LoadDevicesAsync();
+    }
+
     private async Task HandleSearch(KeyboardEventArgs e)
     {
         if (e.Key == "Enter")
@@ -295,6 +354,22 @@
             _page = 1;
             await LoadDevicesAsync();
         }
+    }
+
+    private async Task OnCategoryFilterChanged(ChangeEventArgs args)
+    {
+        var raw = args.Value?.ToString();
+        _selectedCategoryFilter = int.TryParse(raw, out var categoryId) ? categoryId : null;
+        _page = 1;
+        await LoadDevicesAsync();
+    }
+
+    private async Task OnPriceFilterChanged(ChangeEventArgs args)
+    {
+        var raw = args.Value?.ToString();
+        _priceFilter = raw is "with" or "without" ? raw : "all";
+        _page = 1;
+        await LoadDevicesAsync();
     }
 
     private async Task NextPage()

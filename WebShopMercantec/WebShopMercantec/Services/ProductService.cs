@@ -67,14 +67,14 @@ public class ProductService : IProductService
     }
 
     public async Task<(IEnumerable<ProductDto> Products, int TotalCount)> GetAdminProductsPagedAsync(
-        int pageNumber, int pageSize, string? searchTerm = null)
+        int pageNumber, int pageSize, string? searchTerm = null, int? categoryId = null, bool? hasPrice = null)
     {
         _logger.LogInformation(
-            "Getting admin paged products: Page={Page}, Size={Size}, Search={Search}",
-            pageNumber, pageSize, searchTerm);
+            "Getting admin paged products: Page={Page}, Size={Size}, Search={Search}, Category={CategoryId}, HasPrice={HasPrice}",
+            pageNumber, pageSize, searchTerm, categoryId, hasPrice);
 
         var (assetsWithDetails, totalCount) = await _unitOfWork.Products.GetProductsPagedWithDetailsAsync(
-            pageNumber, pageSize, null, null, null, searchTerm, null, null, availableOnly: false);
+            pageNumber, pageSize, categoryId, null, null, searchTerm, null, null, hasPrice, availableOnly: false);
 
         var products = ProductMapping.MapFromDetailsList(assetsWithDetails).ToList();
         return (products, totalCount);
@@ -133,6 +133,24 @@ public class ProductService : IProductService
             throw new NotFoundException("Product", productId);
 
         asset.Requestable = requestable ? (sbyte)1 : (sbyte)0;
+        asset.UpdatedAt = DateTime.UtcNow;
+
+        _unitOfWork.Products.Update(asset);
+        await _unitOfWork.SaveChangesAsync();
+
+        return await GetProductByIdAsync(productId) ?? throw new InvalidOperationException("Failed to reload product");
+    }
+
+    public async Task<ProductDto> SetProductPriceAsync(int productId, decimal price)
+    {
+        if (price < 0)
+            throw new BadRequestException("Price cannot be negative");
+
+        var asset = await _unitOfWork.Products.GetByIdAsync((uint)productId);
+        if (asset == null || asset.DeletedAt != null)
+            throw new NotFoundException("Product", productId);
+
+        asset.PurchaseCost = decimal.Round(price, 2, MidpointRounding.AwayFromZero);
         asset.UpdatedAt = DateTime.UtcNow;
 
         _unitOfWork.Products.Update(asset);

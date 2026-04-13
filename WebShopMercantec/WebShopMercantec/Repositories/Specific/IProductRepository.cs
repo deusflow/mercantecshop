@@ -120,6 +120,7 @@ public interface IProductRepository : IRepository<Asset>
         string? searchTerm = null,
         decimal? minPrice = null,
         decimal? maxPrice = null,
+        bool? hasPrice = null,
         bool? availableOnly = true);
     
     /// <summary>

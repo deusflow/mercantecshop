@@ -432,6 +432,7 @@ public class ProductRepository : Repository<Asset>, IProductRepository
         string? searchTerm = null,
         decimal? minPrice = null,
         decimal? maxPrice = null,
+        bool? hasPrice = null,
         bool? availableOnly = true)
     {
         var query = _dbSet.AsNoTracking().Where(a => a.DeletedAt == null);
@@ -480,6 +481,13 @@ public class ProductRepository : Repository<Asset>, IProductRepository
             query = query.Where(a => a.PurchaseCost >= minPrice.Value);
         if (maxPrice.HasValue)
             query = query.Where(a => a.PurchaseCost <= maxPrice.Value);
+
+        if (hasPrice.HasValue)
+        {
+            query = hasPrice.Value
+                ? query.Where(a => a.PurchaseCost.HasValue && a.PurchaseCost > 0)
+                : query.Where(a => !a.PurchaseCost.HasValue || a.PurchaseCost <= 0);
+        }
 
         var totalCount = await query.CountAsync();
 
