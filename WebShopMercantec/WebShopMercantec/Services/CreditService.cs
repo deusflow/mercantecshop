@@ -119,7 +119,7 @@ public class CreditService : ICreditService
         return txs.Select(MapTransaction);
     }
 
-    // ─── Helpers ─────────────────────────────────────────────────────────
+    // ─ Helpers 
 
     private async Task<WebShopUserCredits> GetOrCreateCreditsAsync(uint userId)
     {

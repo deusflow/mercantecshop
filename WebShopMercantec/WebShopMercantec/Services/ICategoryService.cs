@@ -2,49 +2,40 @@ using WebShopMercantec.Shared.DTOs;
 
 namespace WebShopMercantec.Services;
 
-/// <summary>
-/// Интерфейс сервиса для работы с категориями
-/// Определяет бизнес-логику для управления категориями
-/// </summary>
+// Интерфейс сервиса для работы с категориями
+// Определяет бизнес-логику для управления категориями
+
 public interface ICategoryService
 {
-    /// <summary>
-    /// Получить все активные категории
-    /// </summary>
+    // Получить все активные категории
+    
     Task<IEnumerable<CategoryDto>> GetAllCategoriesAsync();
 
-    /// <summary>
-    /// Получить категории для каталога (asset) с доступным количеством.
-    /// </summary>
+    // Получить категории для каталога (asset) с доступным количеством.
+    
     Task<IEnumerable<CategoryDto>> GetCatalogCategoriesAsync(bool includeHidden = false);
 
-    /// <summary>
-    /// Изменить видимость категории в каталоге.
-    /// </summary>
+    // Изменить видимость категории в каталоге.
+    
     Task SetCategoryVisibilityAsync(int categoryId, bool visible);
 
-    /// <summary>
-    /// Получить категорию по ID
-    /// </summary>
+    // Получить категорию по ID
+    
     Task<CategoryDto?> GetCategoryByIdAsync(int id);
     
-    /// <summary>
-    /// Получить категории по типу (asset, accessory, consumable, component)
-    /// </summary>
+    // Получить категории по типу (asset, accessory, consumable, component)
+    
     Task<IEnumerable<CategoryDto>> GetCategoriesByTypeAsync(string categoryType);
     
-    /// <summary>
-    /// Создать новую категорию
-    /// </summary>
+    // Создать новую категорию
+    
     Task<CategoryDto> CreateCategoryAsync(CategoryDto categoryDto);
     
-    /// <summary>
-    /// Обновить существующую категорию
-    /// </summary>
+    // Обновить существующую категорию
+    
     Task<CategoryDto> UpdateCategoryAsync(int id, CategoryDto categoryDto);
     
-    /// <summary>
-    /// Удалить категорию (soft delete)
-    /// </summary>
+    // Удалить категорию (soft delete)
+    
     Task DeleteCategoryAsync(int id);
 }

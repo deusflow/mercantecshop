@@ -5,11 +5,7 @@ using WebShopMercantec.Shared.DTOs;
 
 namespace WebShopMercantec.Controllers;
 
-/// <summary>
-/// POST /api/credits/users/{userId}/add          → [Admin] начислить кредиты
-/// GET  /api/credits/users/{userId}/balance      → [Admin] баланс пользователя
-/// GET  /api/credits/users/{userId}/transactions → [Admin] история транзакций
-/// </summary>
+// admin tools for managing user credits
 [Route("api/[controller]")]
 [ApiController]
 [Authorize(Roles = "Admin")]
@@ -22,7 +18,7 @@ public class CreditsController : ControllerBase
         _creditService = creditService;
     }
 
-    /// <summary>Add credits to a user [Admin]</summary>
+    // add credits to user balance
     [HttpPost("users/{userId}/add")]
     public async Task<ActionResult<TransactionDto>> AddCredits(int userId, [FromBody] CreditAdjustmentDto dto)
     {
@@ -30,7 +26,7 @@ public class CreditsController : ControllerBase
         return Ok(tx);
     }
 
-    /// <summary>Get user's credit balance [Admin]</summary>
+    // get user balance
     [HttpGet("users/{userId}/balance")]
     public async Task<ActionResult> GetBalance(int userId)
     {
@@ -38,7 +34,7 @@ public class CreditsController : ControllerBase
         return Ok(new { userId, balance });
     }
 
-    /// <summary>Get user's transaction history [Admin]</summary>
+    // get user transaction history
     [HttpGet("users/{userId}/transactions")]
     public async Task<ActionResult<IEnumerable<TransactionDto>>> GetTransactions(
         int userId,
@@ -49,4 +45,3 @@ public class CreditsController : ControllerBase
         return Ok(txs);
     }
 }
-

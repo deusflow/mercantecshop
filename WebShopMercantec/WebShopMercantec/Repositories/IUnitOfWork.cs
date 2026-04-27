@@ -16,10 +16,7 @@ public interface IUnitOfWork : IDisposable
     ILocationRepository Locations { get; }
     IStatusLabelRepository StatusLabels { get; }
 
-    /// <summary>
-    /// Direct access to EF Core context for WebShop-specific tables
-    /// (CreditTransactions, RefreshTokens, WebShopUserCredits)
-    /// </summary>
+    
     SnipeItContext Context { get; }
 
     // === MANAGEMENT ===

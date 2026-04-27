@@ -15,12 +15,6 @@ using System.Text;
 
 namespace WebShopMercantec;
 
-/// <summary>
-/// WebShopMercantec Server Entry Point
-/// ARCHITECTURE: WASM SPA (Single Page App)
-/// - Frontend: WebAssembly Client runs in browser (WebShopMercantec.Client)
-/// - Backend: This server = REST API + static file serving only
-/// </summary>
 public class Program
 {
     public static void Main(string[] args)
@@ -36,7 +30,7 @@ public class Program
 
             builder.Services.AddControllers();
             
-            // === ANTIFORGERY ===
+            // csrf protection
             builder.Services.AddAntiforgery();
             
             builder.Services.AddCors(options =>
@@ -51,6 +45,7 @@ public class Program
                     }
                     else
                     {
+                        // restrictive production cors
                         policy.WithOrigins(
                                   builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() 
                                   ?? new[] { "https://localhost" })
@@ -68,6 +63,7 @@ public class Program
                     "ConnectionStrings:DefaultConnection is empty. Set it in appsettings.Development.json");
             }
 
+            // database setup with retry logic for reliability
             builder.Services.AddDbContext<SnipeItContext>(options =>
                 options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString),
                     mysqlOptions => mysqlOptions.EnableRetryOnFailure(
@@ -75,6 +71,7 @@ public class Program
                         maxRetryDelay: TimeSpan.FromSeconds(10),
                         errorNumbersToAdd: null)));
             
+            // dependency injection for repositories
             builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
             builder.Services.AddScoped<IUserRepository, UserRepository>();
             builder.Services.AddScoped<IProductRepository, ProductRepository>();
@@ -87,9 +84,11 @@ public class Program
             builder.Services.AddScoped<IStatusLabelRepository, StatusLabelRepository>();
             builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
             
+            // input validation setup
             builder.Services.AddValidatorsFromAssemblyContaining<Program>();
             builder.Services.AddFluentValidationAutoValidation();
 
+            // rate limiting to prevent auth abuse
             builder.Services.AddRateLimiter(options =>
             {
                 options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -101,6 +100,7 @@ public class Program
                 });
             });
             
+            // dependency injection for business services
             builder.Services.AddScoped<IProductService, ProductService>();
             builder.Services.AddScoped<ICategoryService, CategoryService>();
             builder.Services.AddScoped<IManufacturerService, ManufacturerService>();
@@ -113,6 +113,7 @@ public class Program
             builder.Services.AddScoped<ICreditService, CreditService>();
             builder.Services.AddScoped<IOrderService, OrderService>();
 
+            // jwt authentication configuration
             var jwtSettings = builder.Configuration
                 .GetSection(JwtSettings.SectionName)
                 .Get<JwtSettings>() ?? new JwtSettings();
@@ -162,6 +163,7 @@ public class Program
 
             var app = builder.Build();
 
+            // custom error handler middleware
             app.UseErrorHandling();
 
             if (app.Environment.IsDevelopment())
@@ -179,7 +181,7 @@ public class Program
             app.UseCors("WebShopPolicy");
             app.UseRateLimiter();
 
-            // Hosted WASM static assets (_framework, app files, scoped css)
+            // serve blazor wasm static files
             app.UseBlazorFrameworkFiles();
             app.UseStaticFiles();
 
@@ -192,6 +194,7 @@ public class Program
             
             app.MapHealthChecks("/health");
             
+            // fallback for spa routing
             app.MapFallbackToFile("index.html");
 
             Log.Information("✅ Server initialized. Starting...");

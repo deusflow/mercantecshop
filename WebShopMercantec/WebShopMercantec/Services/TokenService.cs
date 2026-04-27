@@ -9,9 +9,8 @@ using WebShopMercantec.Models;
 
 namespace WebShopMercantec.Services;
 
-/// <summary>
-/// JWT token generation and validation
-/// </summary>
+// JWT token generation and validation
+
 public class TokenService : ITokenService
 {
     private readonly JwtSettings _jwt;
@@ -107,12 +106,11 @@ public class TokenService : ITokenService
         }
     }
 
-    // ─── Helpers ────────────────────────────────────────────────────────────
+    // ─ Helpers 
 
-    /// <summary>
-    /// Determine role from Snipe-IT permissions JSON or superadmin flag.
-    /// Snipe-IT stores permissions as JSON: {"superadmin":"1","admin":"1",...}
-    /// </summary>
+    // Determine role from Snipe-IT permissions JSON or superadmin flag.
+    // Snipe-IT stores permissions as JSON: {"superadmin":"1","admin":"1",...}
+    
     private static string ResolveRole(User user)
     {
         if (string.IsNullOrWhiteSpace(user.Permissions))

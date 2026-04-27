@@ -3,17 +3,9 @@ using WebShopMercantec.Shared.DTOs;
 
 namespace WebShopMercantec.Mapping;
 
-/// <summary>
-/// Маппинг для Product (Asset и Accessory) -> ProductDto/AccessoryDto
-/// Централизованное место для преобразования Entity в DTO
-/// </summary>
 public static class ProductMapping
 {
-    // === ОСНОВНОЙ МЕТОД: Из AssetWithDetails (все связи заполнены) ===
-
-    /// <summary>
-    /// Преобразовать AssetWithDetails в ProductDto (все связанные поля заполнены)
-    /// </summary>
+        // main mapping: from asset with full relational data
     public static ProductDto MapFromDetails(AssetWithDetails details)
     {
         var (asset, model, category, manufacturer, statusLabel, location, supplier) = details;
@@ -65,20 +57,12 @@ public static class ProductMapping
         };
     }
 
-    /// <summary>
-    /// Преобразовать список AssetWithDetails в список ProductDto
-    /// </summary>
     public static IEnumerable<ProductDto> MapFromDetailsList(IEnumerable<AssetWithDetails> detailsList)
     {
         return detailsList.Select(MapFromDetails);
     }
 
-    // === LEGACY МЕТОД: Из Asset напрямую (без связей, для обратной совместимости) ===
-
-    /// <summary>
-    /// Преобразовать Asset в ProductDto (связанные данные будут null/Unknown)
-    /// DEPRECATED: Используйте MapFromDetails с AssetWithDetails
-    /// </summary>
+    // legacy mapping: from raw asset entity without joins
     public static ProductDto MapAssetToDto(Asset asset)
     {
         return new ProductDto
@@ -101,7 +85,7 @@ public static class ProductMapping
             ManufacturerName = null,
             ModelNumber = null,
             LocationId = asset.LocationId,
-            // Strict availability requires model/status metadata; without details mapper keeps false to avoid false-positives.
+            // requires model/status label to safely determine true availability
             IsAvailable = false,
             Requestable = asset.Requestable == 1,
             Archived = asset.Archived,
@@ -110,6 +94,7 @@ public static class ProductMapping
         };
     }
 
+    // business logic for 'is deployable' combining asset, model and status label
     private static bool IsAssetAvailableStrict(Asset asset, Model? model, StatusLabel? statusLabel)
     {
         return asset.DeletedAt == null
@@ -119,19 +104,14 @@ public static class ProductMapping
                && statusLabel is { Deployable: true, DeletedAt: null };
     }
 
-    /// <summary>
-    /// Преобразовать список Assets в список ProductDto
-    /// </summary>
     public static IEnumerable<ProductDto> MapAssetsToDtos(IEnumerable<Asset> assets)
     {
         return assets.Select(MapAssetToDto);
     }
 
-    // === АКСЕССУАРЫ ===
+    // --- ACCESSORIES ---
 
-    /// <summary>
-    /// Преобразовать AccessoryWithDetails в AccessoryDto (все связанные поля заполнены)
-    /// </summary>
+    // accessory mapping with full relations
     public static AccessoryDto MapFromDetails(AccessoryWithDetails details)
     {
         var (accessory, category, manufacturer, location, supplier) = details;
@@ -165,10 +145,7 @@ public static class ProductMapping
         };
     }
 
-    /// <summary>
-    /// Преобразовать Accessory в AccessoryDto (связанные данные будут null)
-    /// DEPRECATED: Используйте MapFromDetails с AccessoryWithDetails
-    /// </summary>
+    // raw accessory mapping
     public static AccessoryDto MapAccessoryToDto(Accessory accessory)
     {
         return new AccessoryDto
@@ -200,12 +177,8 @@ public static class ProductMapping
         };
     }
 
-    /// <summary>
-    /// Преобразовать список Accessories в список AccessoryDto
-    /// </summary>
     public static IEnumerable<AccessoryDto> MapAccessoriesToDtos(IEnumerable<Accessory> accessories)
     {
         return accessories.Select(MapAccessoryToDto);
     }
 }
-

@@ -3,19 +3,13 @@ using WebShopMercantec.Models;
 
 namespace WebShopMercantec.Repositories.Specific;
 
-/// <summary>
-/// Репозиторий для работы с категориями
-/// Наследует базовый Repository и добавляет специфичные для Category методы
-/// </summary>
 public class CategoryRepository : Repository<Category>, ICategoryRepository
 {
     public CategoryRepository(SnipeItContext context) : base(context)
     {
     }
 
-    /// <summary>
-    /// Получить все активные (не удалённые) категории с сортировкой по имени
-    /// </summary>
+    
     public async Task<IEnumerable<Category>> GetAllActiveCategoriesAsync()
     {
         return await _dbSet
@@ -25,9 +19,7 @@ public class CategoryRepository : Repository<Category>, ICategoryRepository
             .ToListAsync();
     }
 
-    /// <summary>
-    /// Получить категорию по ID (только активные)
-    /// </summary>
+    
     public async Task<Category?> GetActiveCategoryByIdAsync(uint id)
     {
         return await _dbSet
@@ -36,9 +28,7 @@ public class CategoryRepository : Repository<Category>, ICategoryRepository
             .FirstOrDefaultAsync();
     }
 
-    /// <summary>
-    /// Получить категории определённого типа (asset, accessory, consumable, component)
-    /// </summary>
+    
     public async Task<IEnumerable<Category>> GetCategoriesByTypeAsync(string categoryType)
     {
         return await _dbSet
@@ -48,10 +38,7 @@ public class CategoryRepository : Repository<Category>, ICategoryRepository
             .ToListAsync();
     }
 
-    /// <summary>
-    /// Подсчитать количество элементов в категории
-    /// Считает только активные (не удалённые) элементы
-    /// </summary>
+    
     public async Task<int> GetItemsCountAsync(uint categoryId)
     {
         // Подсчитываем Assets (продукты) в этой категории через Model
@@ -72,10 +59,7 @@ public class CategoryRepository : Repository<Category>, ICategoryRepository
         return assetsCount + accessoriesCount;
     }
 
-    /// <summary>
-    /// Получить количество элементов для всех категорий одним запросом
-    /// Вместо N+1 запросов — всего 2 запроса (assets + accessories)
-    /// </summary>
+    
     public async Task<Dictionary<uint, int>> GetAllItemsCountsBatchAsync()
     {
         // 1. Подсчитываем Assets по категориям (через Model -> CategoryId)

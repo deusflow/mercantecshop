@@ -7,27 +7,19 @@ using WebShopMercantec.Shared.DTOs;
 
 namespace WebShopMercantec.Controllers;
 
-/// <summary>
-/// POST /api/auth/login        → получить JWT
-/// POST /api/auth/register     → регистрация
-/// POST /api/auth/refresh      → обновить токен
-/// POST /api/auth/logout       → отозвать refresh token
-/// GET  /api/auth/me           → текущий пользователь
-/// </summary>
+// public auth endpoints
 [Route("api/[controller]")]
 [ApiController]
 public class AuthController : ControllerBase
 {
     private readonly IAuthService _authService;
-    private readonly ILogger<AuthController> _logger;
 
     public AuthController(IAuthService authService, ILogger<AuthController> logger)
     {
         _authService = authService;
-        _logger = logger;
     }
 
-    /// <summary>Login and receive JWT access + refresh token</summary>
+    // login and get tokens
     [HttpPost("login")]
     [AllowAnonymous]
     [EnableRateLimiting("auth")]
@@ -37,7 +29,7 @@ public class AuthController : ControllerBase
         return Ok(result);
     }
 
-    /// <summary>Register a new user account</summary>
+    // register new user
     [HttpPost("register")]
     [AllowAnonymous]
     [EnableRateLimiting("auth")]
@@ -50,7 +42,7 @@ public class AuthController : ControllerBase
         return CreatedAtAction(nameof(Me), result);
     }
 
-    /// <summary>Refresh access token using refresh token</summary>
+    // refresh access token
     [HttpPost("refresh")]
     [AllowAnonymous]
     [EnableRateLimiting("auth")]
@@ -60,7 +52,7 @@ public class AuthController : ControllerBase
         return Ok(result);
     }
 
-    /// <summary>Revoke refresh token (logout)</summary>
+    // logout and revoke refresh token
     [HttpPost("logout")]
     [Authorize]
     public async Task<ActionResult> Logout([FromBody] RefreshTokenDto dto)
@@ -70,7 +62,7 @@ public class AuthController : ControllerBase
         return NoContent();
     }
 
-    /// <summary>Get the currently authenticated user</summary>
+    // get current user info
     [HttpGet("me")]
     [Authorize]
     public async Task<ActionResult<UserDto>> Me()
@@ -81,4 +73,3 @@ public class AuthController : ControllerBase
         return Ok(user);
     }
 }
-

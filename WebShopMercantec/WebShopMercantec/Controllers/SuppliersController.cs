@@ -4,9 +4,8 @@ using WebShopMercantec.Services;
 
 namespace WebShopMercantec.Controllers;
 
-/// <summary>
-/// API контроллер для работы с поставщиками (Suppliers)
-/// </summary>
+// API контроллер для работы с поставщиками (Suppliers)
+
 [Route("api/[controller]")]
 [ApiController]
 public class SuppliersController : ControllerBase
@@ -18,9 +17,8 @@ public class SuppliersController : ControllerBase
         _supplierService = supplierService;
     }
 
-    /// <summary>
-    /// Получить всех поставщиков
-    /// </summary>
+    // Получить всех поставщиков
+    
     [HttpGet]
     public async Task<ActionResult<IEnumerable<SupplierDto>>> GetAll()
     {
@@ -28,9 +26,8 @@ public class SuppliersController : ControllerBase
         return Ok(suppliers);
     }
 
-    /// <summary>
-    /// Получить поставщика по ID
-    /// </summary>
+    // Получить поставщика по ID
+    
     [HttpGet("{id}")]
     public async Task<ActionResult<SupplierDto>> GetById(int id)
     {

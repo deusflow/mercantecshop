@@ -4,19 +4,12 @@ using WebShopMercantec.Repositories.Specific;
 
 namespace WebShopMercantec.Repositories;
 
-/// <summary>
-/// Unit of Work Implementation
-/// Реализация паттерна Unit of Work для координации работы репозиториев.
-/// Все репозитории инжектируются через DI (не создаются вручную через new).
-/// </summary>
 public class UnitOfWork : IUnitOfWork
 {
     private readonly SnipeItContext _context;
     private IDbContextTransaction? _transaction;
 
-    /// <summary>
-    /// Конструктор — все зависимости через DI
-    /// </summary>
+    
     public UnitOfWork(
         SnipeItContext context,
         IUserRepository users,
@@ -53,24 +46,18 @@ public class UnitOfWork : IUnitOfWork
     public ILocationRepository Locations { get; }
     public IStatusLabelRepository StatusLabels { get; }
 
-    /// <summary>
-    /// Direct context access for WebShop-specific DbSets
-    /// </summary>
+    
     public SnipeItContext Context => _context;
 
     // === МЕТОДЫ УПРАВЛЕНИЯ ===
 
-    /// <summary>
-    /// Сохранить все изменения в БД
-    /// </summary>
+    
     public async Task<int> SaveChangesAsync()
     {
         return await _context.SaveChangesAsync();
     }
 
-    /// <summary>
-    /// Начать транзакцию БД
-    /// </summary>
+    
     public async Task BeginTransactionAsync()
     {
         if (_transaction != null)
@@ -79,9 +66,7 @@ public class UnitOfWork : IUnitOfWork
         _transaction = await _context.Database.BeginTransactionAsync();
     }
 
-    /// <summary>
-    /// Зафиксировать транзакцию
-    /// </summary>
+    
     public async Task CommitTransactionAsync()
     {
         if (_transaction != null)
@@ -92,9 +77,7 @@ public class UnitOfWork : IUnitOfWork
         }
     }
 
-    /// <summary>
-    /// Откатить транзакцию
-    /// </summary>
+    
     public async Task RollbackTransactionAsync()
     {
         if (_transaction != null)
@@ -105,9 +88,7 @@ public class UnitOfWork : IUnitOfWork
         }
     }
 
-    /// <summary>
-    /// Освободить ресурсы
-    /// </summary>
+    
     public void Dispose()
     {
         _transaction?.Dispose();

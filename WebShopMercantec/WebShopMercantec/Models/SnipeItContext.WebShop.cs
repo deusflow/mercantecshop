@@ -2,10 +2,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace WebShopMercantec.Models;
 
-/// <summary>
-/// Partial class расширение SnipeItContext для WebShop-specific таблиц.
-/// НЕ трогаем SnipeItContext.cs (scaffolded) — расширяем через partial.
-/// </summary>
 public partial class SnipeItContext
 {
     public DbSet<WebShopUserCredits> WebShopUserCredits { get; set; } = null!;

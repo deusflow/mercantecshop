@@ -3,10 +3,6 @@ using WebShopMercantec.Shared.DTOs;
 
 namespace WebShopMercantec.Validators;
 
-/// <summary>
-/// Валидатор для RegisterDto
-/// Проверяет корректность данных при регистрации нового пользователя
-/// </summary>
 public class RegisterDtoValidator : AbstractValidator<RegisterDto>
 {
     public RegisterDtoValidator()

@@ -1,21 +1,5 @@
 namespace WebShopMercantec.Exceptions;
 
-/// <summary>
-/// Исключение для случаев, когда товар/аксессуар недоступен для заказа
-/// HTTP Status Code: 409 Conflict (или 400 Bad Request)
-/// 
-/// КОГДА ИСПОЛЬЗОВАТЬ:
-/// - Товар уже назначен кому-то
-/// - Товар в архиве
-/// - Товар не requestable
-/// - Аксессуар закончился (qty = 0)
-/// - Попытка заказать товар повторно
-/// 
-/// ПРИМЕР:
-/// var isAvailable = await _unitOfWork.Products.IsAvailableForCheckoutAsync(productId);
-/// if (!isAvailable)
-///     throw new ProductNotAvailableException("Product is not available for checkout");
-/// </summary>
 public class ProductNotAvailableException : Exception
 {
     public int? ProductId { get; }

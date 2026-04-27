@@ -1,8 +1,5 @@
 namespace WebShopMercantec.Models;
 
-/// <summary>
-/// WebShop-specific: refresh tokens для JWT.
-/// </summary>
 public class RefreshToken
 {
     public int Id { get; set; }

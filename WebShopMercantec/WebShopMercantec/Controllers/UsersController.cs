@@ -6,14 +6,7 @@ using WebShopMercantec.Shared.DTOs;
 
 namespace WebShopMercantec.Controllers;
 
-/// <summary>
-/// GET  /api/users/me              → профиль текущего пользователя
-/// PUT  /api/users/me              → обновить профиль
-/// GET  /api/users/{id}            → [Admin] профиль пользователя
-/// GET  /api/users                 → [Admin] список пользователей
-/// GET  /api/users/me/credits      → баланс кредитов
-/// GET  /api/users/me/transactions → история транзакций
-/// </summary>
+// user profile and credit management
 [Route("api/[controller]")]
 [ApiController]
 [Authorize]
@@ -28,7 +21,7 @@ public class UsersController : ControllerBase
         _creditService = creditService;
     }
 
-    /// <summary>Get current user profile</summary>
+    // get my profile
     [HttpGet("me")]
     public async Task<ActionResult<UserDto>> GetMe()
     {
@@ -37,7 +30,7 @@ public class UsersController : ControllerBase
         return Ok(user);
     }
 
-    /// <summary>Update current user profile</summary>
+    // update my profile
     [HttpPut("me")]
     public async Task<ActionResult<UserDto>> UpdateMe([FromBody] UserDto dto)
     {
@@ -46,7 +39,7 @@ public class UsersController : ControllerBase
         return Ok(updated);
     }
 
-    /// <summary>Get user by ID [Admin only]</summary>
+    // admin: get user by id
     [HttpGet("{id}")]
     [Authorize(Roles = "Admin")]
     public async Task<ActionResult<UserDto>> GetById(int id)
@@ -55,7 +48,7 @@ public class UsersController : ControllerBase
         return Ok(user);
     }
 
-    /// <summary>Get paginated users list [Admin only]</summary>
+    // admin: list users paged
     [HttpGet]
     [Authorize(Roles = "Admin")]
     public async Task<ActionResult> GetAll(
@@ -75,7 +68,7 @@ public class UsersController : ControllerBase
         });
     }
 
-    /// <summary>Get admin statistics [Admin only]</summary>
+    // admin: total system stats
     [HttpGet("stats")]
     [Authorize(Roles = "Admin")]
     public async Task<ActionResult<AdminStatsDto>> GetStats()
@@ -84,7 +77,7 @@ public class UsersController : ControllerBase
         return Ok(stats);
     }
 
-    /// <summary>Add credits to user [Admin only]</summary>
+    // admin: add credits to user
     [HttpPost("{id}/add-credits")]
     [Authorize(Roles = "Admin")]
     public async Task<ActionResult> AddCredits(int id, [FromBody] decimal amount)
@@ -95,7 +88,7 @@ public class UsersController : ControllerBase
         return Ok(tx);
     }
 
-    /// <summary>Deduct credits from user [Admin only]</summary>
+    // admin: remove credits from user
     [HttpPost("{id}/deduct-credits")]
     [Authorize(Roles = "Admin")]
     public async Task<ActionResult> DeductCredits(int id, [FromBody] decimal amount)
@@ -106,7 +99,7 @@ public class UsersController : ControllerBase
         return Ok(tx);
     }
 
-    /// <summary>Get current user's credit balance</summary>
+    // get my credit balance
     [HttpGet("me/credits")]
     public async Task<ActionResult> GetMyCredits()
     {
@@ -115,7 +108,7 @@ public class UsersController : ControllerBase
         return Ok(new { userId, balance });
     }
 
-    /// <summary>Get current user's transaction history</summary>
+    // get my transaction history
     [HttpGet("me/transactions")]
     public async Task<ActionResult<IEnumerable<TransactionDto>>> GetMyTransactions(
         [FromQuery] int page = 1,

@@ -1,9 +1,5 @@
 namespace WebShopMercantec.Models;
 
-/// <summary>
-/// WebShop-specific: история транзакций кредитов.
-/// Каждое списание, пополнение, возврат.
-/// </summary>
 public class CreditTransaction
 {
     public int Id { get; set; }

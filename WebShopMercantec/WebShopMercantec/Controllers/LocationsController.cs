@@ -4,9 +4,8 @@ using WebShopMercantec.Services;
 
 namespace WebShopMercantec.Controllers;
 
-/// <summary>
-/// API контроллер для работы с локациями (Locations)
-/// </summary>
+// API контроллер для работы с локациями (Locations)
+
 [Route("api/[controller]")]
 [ApiController]
 public class LocationsController : ControllerBase
@@ -18,9 +17,8 @@ public class LocationsController : ControllerBase
         _locationService = locationService;
     }
 
-    /// <summary>
-    /// Получить все локации
-    /// </summary>
+    // Получить все локации
+    
     [HttpGet]
     public async Task<ActionResult<IEnumerable<LocationDto>>> GetAll()
     {
@@ -28,9 +26,8 @@ public class LocationsController : ControllerBase
         return Ok(locations);
     }
 
-    /// <summary>
-    /// Получить локацию по ID
-    /// </summary>
+    // Получить локацию по ID
+    
     [HttpGet("{id}")]
     public async Task<ActionResult<LocationDto>> GetById(int id)
     {

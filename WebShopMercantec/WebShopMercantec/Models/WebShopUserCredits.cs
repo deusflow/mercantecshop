@@ -1,9 +1,5 @@
 namespace WebShopMercantec.Models;
 
-/// <summary>
-/// WebShop-specific: баланс кредитов пользователя.
-/// Отдельная таблица — не трогаем таблицу users Snipe-IT.
-/// </summary>
 public class WebShopUserCredits
 {
     public int Id { get; set; }

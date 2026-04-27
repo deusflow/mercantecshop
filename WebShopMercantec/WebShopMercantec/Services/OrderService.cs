@@ -6,17 +6,15 @@ using WebShopMercantec.Shared.DTOs;
 
 namespace WebShopMercantec.Services;
 
-/// <summary>
-/// Full checkout/order workflow:
-/// Create → (Approve → Asset assigned) | (Decline → credits refunded) | (Cancel → credits refunded)
-/// </summary>
+// manages the full checkout and order lifecycle:
+// creation -> (approval -> asset assignment) | (decline -> refund) | (cancellation -> refund)
 public class OrderService : IOrderService
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICreditService _creditService;
     private readonly ILogger<OrderService> _logger;
 
-    // Snipe-IT: StatusId 3 = Deployed
+    // snipe-it status id 3 means 'deployed' or 'checked out'
     private const int StatusDeployed = 3;
 
     public OrderService(
@@ -29,7 +27,7 @@ public class OrderService : IOrderService
         _logger = logger;
     }
 
-    // ─── Create ─────────────────────────────────────────────────────────
+    // ─ Create 
 
     public async Task<OrderDto> CreateOrderAsync(int userId, OrderCreateDto dto)
     {
@@ -38,6 +36,7 @@ public class OrderService : IOrderService
         decimal price = 0m;
         string productName;
 
+        // validate asset or accessory availability and get current price
         if (dto.RequestableType == "asset")
         {
             var product = await _unitOfWork.Products.GetByIdAsync((uint)dto.RequestableId);
@@ -61,17 +60,18 @@ public class OrderService : IOrderService
             throw new BadRequestException($"Unknown requestable type: {dto.RequestableType}");
         }
 
+        // check if user can afford the purchase
         if (!await _creditService.HasSufficientCreditsAsync((uint)userId, price))
             throw new InsufficientCreditsException(price, await _creditService.GetBalanceAsync((uint)userId));
 
         await _unitOfWork.BeginTransactionAsync();
         try
         {
-            // Deduct credits first
+            // deduct credits immediately on order creation
             if (price > 0)
                 await _creditService.DeductCreditsAsync((uint)userId, price, $"Purchase: {productName}");
 
-            // Create checkout request
+            // log the checkout request in the db
             var order = new CheckoutRequest
             {
                 UserId = userId,
@@ -99,7 +99,7 @@ public class OrderService : IOrderService
         }
     }
 
-    // ─── Read ────────────────────────────────────────────────────────────
+    // ─ Read 
 
     public async Task<IEnumerable<OrderDto>> GetMyOrdersAsync(int userId)
     {
@@ -122,7 +122,7 @@ public class OrderService : IOrderService
         return OrderMapping.MapToDto(order);
     }
 
-    // ─── Cancel (user) ───────────────────────────────────────────────────
+    // ─ Cancel (user) 
 
     public async Task<OrderDto> CancelOrderAsync(int orderId, int userId)
     {
@@ -135,6 +135,7 @@ public class OrderService : IOrderService
         await _unitOfWork.BeginTransactionAsync();
         try
         {
+            // refund user credits on cancellation
             var price = await GetOrderPriceAsync(order);
             if (price > 0)
                 await _creditService.AddCreditsAsync((uint)userId, price, $"Refund: Order #{orderId} canceled", orderId);
@@ -155,7 +156,7 @@ public class OrderService : IOrderService
         }
     }
 
-    // ─── Admin: Approve ─────────────────────────────────────────────────
+    // ─ Admin: Approve 
 
     public async Task<OrderDto> ApproveOrderAsync(int orderId)
     {
@@ -167,6 +168,7 @@ public class OrderService : IOrderService
         await _unitOfWork.BeginTransactionAsync();
         try
         {
+            // if it's an asset, mark it as deployed to the user in Snipe-IT
             if (order.RequestableType.Contains("Asset"))
             {
                 var asset = await _unitOfWork.Products.GetByIdAsync((uint)order.RequestableId);
@@ -197,7 +199,7 @@ public class OrderService : IOrderService
         }
     }
 
-    // ─── Admin: Decline ─────────────────────────────────────────────────
+    // ─ Admin: Decline 
 
     public async Task<OrderDto> DeclineOrderAsync(int orderId, string? reason = null)
     {
@@ -209,6 +211,7 @@ public class OrderService : IOrderService
         await _unitOfWork.BeginTransactionAsync();
         try
         {
+            // refund credits if order is declined by admin
             var price = await GetOrderPriceAsync(order);
             if (price > 0)
                 await _creditService.AddCreditsAsync(
@@ -239,8 +242,9 @@ public class OrderService : IOrderService
         return (orders.Select(o => OrderMapping.MapToDto(o)), total);
     }
 
-    // ─── Helpers ─────────────────────────────────────────────────────────
+    // ─ Helpers 
 
+    // calculates total order price based on asset cost or accessory unit cost * quantity
     private async Task<decimal> GetOrderPriceAsync(CheckoutRequest order)
     {
         if (order.RequestableType.Contains("Asset"))

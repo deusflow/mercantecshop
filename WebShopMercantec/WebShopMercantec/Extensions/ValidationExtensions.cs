@@ -3,19 +3,9 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace WebShopMercantec.Extensions;
 
-/// <summary>
-/// Extension методы для валидации в контроллерах
-/// Позволяют легко валидировать DTOs и автоматически возвращать ошибки
-/// </summary>
 public static class ValidationExtensions
 {
-    /// <summary>
-    /// Валидирует объект и возвращает BadRequest с ошибками если валидация не прошла
-    /// 
-    /// ИСПОЛЬЗОВАНИЕ В КОНТРОЛЛЕРЕ:
-    /// var validationResult = await this.ValidateAsync(createDto, _validator);
-    /// if (validationResult != null) return validationResult;
-    /// </summary>
+    
     public static async Task<ActionResult?> ValidateAsync<T>(
         this ControllerBase controller,
         T model,

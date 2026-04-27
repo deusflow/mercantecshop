@@ -3,10 +3,6 @@ using WebShopMercantec.Shared.DTOs;
 
 namespace WebShopMercantec.Validators;
 
-/// <summary>
-/// Валидатор для AccessoryDto
-/// Проверяет корректность данных аксессуара при создании/обновлении
-/// </summary>
 public class AccessoryDtoValidator : AbstractValidator<AccessoryDto>
 {
     public AccessoryDtoValidator()

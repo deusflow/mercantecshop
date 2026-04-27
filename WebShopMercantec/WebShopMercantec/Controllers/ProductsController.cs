@@ -4,9 +4,7 @@ using WebShopMercantec.Shared.DTOs;
 
 namespace WebShopMercantec.Controllers;
 
-/// <summary>
-/// API контроллер для работы с продуктами и аксессуарами
-/// </summary>
+// handles products and accessories
 [Route("api/[controller]")]
 [ApiController]
 public class ProductsController : ControllerBase
@@ -18,11 +16,9 @@ public class ProductsController : ControllerBase
         _productService = productService;
     }
 
-    // === ПРОДУКТЫ ===
+    // --- PRODUCTS ---
 
-    /// <summary>
-    /// Получить все доступные продукты
-    /// </summary>
+    // get all available products
     [HttpGet]
     public async Task<ActionResult<IEnumerable<ProductDto>>> GetProducts()
     {
@@ -30,21 +26,16 @@ public class ProductsController : ControllerBase
         return Ok(products);
     }
 
-    /// <summary>
-    /// Получить продукт по ID
-    /// </summary>
+    // get product by id
     [HttpGet("{id}")]
     public async Task<ActionResult<ProductDto>> GetProduct(int id)
     {
-        // Сервис сам бросит NotFoundException если не найдено
-        // Middleware перехватит и вернет 404
+        // 404 is handled by middleware
         var product = await _productService.GetProductByIdAsync(id);
         return Ok(product);
     }
 
-    /// <summary>
-    /// Активировать продукт / изменить статус [Admin only]
-    /// </summary>
+    // admin: update product status/activation
     [HttpPut("{id}/activate")]
     [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin,SuperAdmin")]
     public async Task<ActionResult<ProductDto>> ActivateProduct(int id, [FromBody] int statusId)
@@ -53,9 +44,7 @@ public class ProductsController : ControllerBase
         return Ok(product);
     }
 
-    /// <summary>
-    /// Добавить новое устройство [Admin only]
-    /// </summary>
+    // admin: add new device
     [HttpPost]
     [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin,SuperAdmin")]
     public async Task<ActionResult<ProductDto>> CreateProduct([FromBody] CreateDeviceDto dto)
@@ -64,9 +53,7 @@ public class ProductsController : ControllerBase
         return Ok(product);
     }
 
-    /// <summary>
-    /// Включить/выключить устройство в продаже (requestable) [Admin only]
-    /// </summary>
+    // admin: toggle requestable status
     [HttpPut("{id}/requestable")]
     [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin,SuperAdmin")]
     public async Task<ActionResult<ProductDto>> SetRequestable(int id, [FromBody] bool requestable)
@@ -75,9 +62,7 @@ public class ProductsController : ControllerBase
         return Ok(product);
     }
 
-    /// <summary>
-    /// Установить цену устройства (использует assets.purchase_cost) [Admin only]
-    /// </summary>
+    // admin: set purchase/sale price
     [HttpPut("{id}/price")]
     [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin,SuperAdmin")]
     public async Task<ActionResult<ProductDto>> SetPrice(int id, [FromBody] UpdateProductPriceDto dto)
@@ -86,10 +71,9 @@ public class ProductsController : ControllerBase
         return Ok(product);
     }
 
-    /// <summary>
-    /// Получить продукты с пагинацией и фильтрами
-    /// GET /api/products/paged?page=1&amp;pageSize=20&amp;categoryId=3&amp;search=laptop
-    /// </summary>
+    // get paged products with filters
+    // GET /api/products/paged?page=1&amp;pageSize=20&amp;categoryId=3&amp;search=laptop
+    
     [HttpGet("paged")]
     public async Task<ActionResult> GetProductsPaged(
         [FromQuery] int page = 1,
@@ -113,10 +97,9 @@ public class ProductsController : ControllerBase
         });
     }
 
-    /// <summary>
-    /// Получить продукты с пагинацией для админа (включает недоступные)
-    /// GET /api/products/admin-paged?page=1&amp;pageSize=20
-    /// </summary>
+    // admin: get paged products including unavailable ones
+    // GET /api/products/admin-paged?page=1&amp;pageSize=20
+    
     [HttpGet("admin-paged")]
     [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin,SuperAdmin")]
     public async Task<ActionResult> GetAdminProductsPaged(
@@ -138,10 +121,9 @@ public class ProductsController : ControllerBase
         });
     }
 
-    /// <summary>
-    /// Поиск продуктов
-    /// GET /api/products/search?q=laptop
-    /// </summary>
+    // search products by query string
+    // GET /api/products/search?q=laptop
+    
     [HttpGet("search")]
     public async Task<ActionResult<IEnumerable<ProductDto>>> SearchProducts([FromQuery] string q)
     {
@@ -149,10 +131,9 @@ public class ProductsController : ControllerBase
         return Ok(products);
     }
 
-    /// <summary>
-    /// Получить продукты по категории
-    /// GET /api/products/category/3
-    /// </summary>
+    // get products by category id
+    // GET /api/products/category/3
+    
     [HttpGet("category/{categoryId}")]
     public async Task<ActionResult<IEnumerable<ProductDto>>> GetByCategory(int categoryId)
     {
@@ -160,10 +141,9 @@ public class ProductsController : ControllerBase
         return Ok(products);
     }
 
-    /// <summary>
-    /// Получить продукты по производителю
-    /// GET /api/products/manufacturer/5
-    /// </summary>
+    // get products by manufacturer id
+    // GET /api/products/manufacturer/5
+    
     [HttpGet("manufacturer/{manufacturerId}")]
     public async Task<ActionResult<IEnumerable<ProductDto>>> GetByManufacturer(int manufacturerId)
     {
@@ -171,12 +151,9 @@ public class ProductsController : ControllerBase
         return Ok(products);
     }
 
-    // === АКСЕССУАРЫ ===
+    // --- ACCESSORIES ---
 
-    /// <summary>
-    /// Получить все доступные аксессуары
-    /// GET /api/products/accessories
-    /// </summary>
+    // get all available accessories
     [HttpGet("accessories")]
     public async Task<ActionResult<IEnumerable<AccessoryDto>>> GetAccessories()
     {
@@ -184,10 +161,7 @@ public class ProductsController : ControllerBase
         return Ok(accessories);
     }
 
-    /// <summary>
-    /// Получить аксессуар по ID
-    /// GET /api/products/accessories/5
-    /// </summary>
+    // get accessory details
     [HttpGet("accessories/{id}")]
     public async Task<ActionResult<AccessoryDto>> GetAccessory(int id)
     {
@@ -195,10 +169,7 @@ public class ProductsController : ControllerBase
         return Ok(accessory);
     }
 
-    /// <summary>
-    /// Получить аксессуары с пагинацией
-    /// GET /api/products/accessories/paged?page=1&amp;pageSize=20
-    /// </summary>
+    // get paged accessories
     [HttpGet("accessories/paged")]
     public async Task<ActionResult> GetAccessoriesPaged(
         [FromQuery] int page = 1,
@@ -219,12 +190,9 @@ public class ProductsController : ControllerBase
         });
     }
 
-    // === ПРОВЕРКИ ДОСТУПНОСТИ ===
+    // --- AVAILABILITY CHECKS ---
 
-    /// <summary>
-    /// Проверить доступность продукта
-    /// GET /api/products/5/available
-    /// </summary>
+    // check if product asset is available
     [HttpGet("{id}/available")]
     public async Task<ActionResult<bool>> IsProductAvailable(int id)
     {
@@ -232,10 +200,7 @@ public class ProductsController : ControllerBase
         return Ok(new { productId = id, available = isAvailable });
     }
 
-    /// <summary>
-    /// Проверить доступность аксессуара
-    /// GET /api/products/accessories/5/available?quantity=3
-    /// </summary>
+    // check if accessory has enough stock
     [HttpGet("accessories/{id}/available")]
     public async Task<ActionResult<bool>> IsAccessoryAvailable(int id, [FromQuery] int quantity = 1)
     {

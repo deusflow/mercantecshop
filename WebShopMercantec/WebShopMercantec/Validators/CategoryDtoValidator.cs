@@ -3,10 +3,6 @@ using WebShopMercantec.Shared.DTOs;
 
 namespace WebShopMercantec.Validators;
 
-/// <summary>
-/// Валидатор для CategoryDto
-/// Проверяет корректность данных категории при создании/обновлении
-/// </summary>
 public class CategoryDtoValidator : AbstractValidator<CategoryDto>
 {
     public CategoryDtoValidator()

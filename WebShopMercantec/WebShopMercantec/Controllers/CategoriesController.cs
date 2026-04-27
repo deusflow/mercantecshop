@@ -21,9 +21,8 @@ public class CategoriesController : ControllerBase
         _validator = validator;
     }
 
-    /// <summary>
-    /// Получить все категории
-    /// </summary>
+    // Получить все категории
+    
     [HttpGet]
     public async Task<ActionResult<IEnumerable<CategoryDto>>> GetAll()
     {
@@ -31,9 +30,8 @@ public class CategoriesController : ControllerBase
         return Ok(categories);
     }
 
-    /// <summary>
-    /// Получить категорию по ID
-    /// </summary>
+    // Получить категорию по ID
+    
     [HttpGet("{id}")]
     public async Task<ActionResult<CategoryDto>> GetById(int id)
     {
@@ -41,9 +39,8 @@ public class CategoriesController : ControllerBase
         return Ok(category);
     }
 
-    /// <summary>
-    /// Получить категории по типу
-    /// </summary>
+    // Получить категории по типу
+    
     [HttpGet("type/{categoryType}")]
     public async Task<ActionResult<IEnumerable<CategoryDto>>> GetByType(string categoryType)
     {
@@ -51,9 +48,8 @@ public class CategoriesController : ControllerBase
         return Ok(categories);
     }
 
-    /// <summary>
-    /// Создать новую категорию
-    /// </summary>
+    // Создать новую категорию
+    
     [HttpPost]
     [Authorize(Roles = "Admin")]
     public async Task<ActionResult<CategoryDto>> Create([FromBody] CategoryDto categoryDto)
@@ -69,9 +65,8 @@ public class CategoriesController : ControllerBase
         return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
     }
 
-    /// <summary>
-    /// Обновить категорию
-    /// </summary>
+    // Обновить категорию
+    
     [HttpPut("{id}")]
     [Authorize(Roles = "Admin")]
     public async Task<ActionResult<CategoryDto>> Update(int id, [FromBody] CategoryDto categoryDto)
@@ -87,9 +82,8 @@ public class CategoriesController : ControllerBase
         return Ok(updated);
     }
 
-    /// <summary>
-    /// Удалить категорию (soft delete)
-    /// </summary>
+    // Удалить категорию (soft delete)
+    
     [HttpDelete("{id}")]
     [Authorize(Roles = "Admin")]
     public async Task<ActionResult> Delete(int id)
@@ -98,9 +92,8 @@ public class CategoriesController : ControllerBase
         return NoContent();
     }
 
-    /// <summary>
-    /// Категории для витрины каталога (только asset, с учетом ShowInCatalog)
-    /// </summary>
+    // Категории для витрины каталога (только asset, с учетом ShowInCatalog)
+    
     [HttpGet("catalog")]
     public async Task<ActionResult<IEnumerable<CategoryDto>>> GetCatalogCategories()
     {
@@ -108,9 +101,8 @@ public class CategoriesController : ControllerBase
         return Ok(categories);
     }
 
-    /// <summary>
-    /// Категории для админ-настроек витрины (все asset категории)
-    /// </summary>
+    // Категории для админ-настроек витрины (все asset категории)
+    
     [HttpGet("catalog-admin")]
     [Authorize(Roles = "Admin,SuperAdmin")]
     public async Task<ActionResult<IEnumerable<CategoryDto>>> GetCatalogCategoriesAdmin()
@@ -119,9 +111,8 @@ public class CategoriesController : ControllerBase
         return Ok(categories);
     }
 
-    /// <summary>
-    /// Включить/выключить отображение категории на главной витрине
-    /// </summary>
+    // Включить/выключить отображение категории на главной витрине
+    
     [HttpPut("{id}/catalog-visibility")]
     [Authorize(Roles = "Admin,SuperAdmin")]
     public async Task<ActionResult> SetCatalogVisibility(int id, [FromBody] bool visible)

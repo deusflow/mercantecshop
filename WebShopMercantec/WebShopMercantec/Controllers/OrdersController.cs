@@ -6,16 +6,6 @@ using WebShopMercantec.Shared.DTOs;
 
 namespace WebShopMercantec.Controllers;
 
-/// <summary>
-/// POST /api/orders                  → создать заказ
-/// GET  /api/orders/my               → мои заказы
-/// GET  /api/orders/my/paged         → мои заказы с пагинацией
-/// GET  /api/orders/{id}             → детали заказа
-/// POST /api/orders/{id}/cancel      → отменить заказ (пользователь)
-/// GET  /api/orders                  → [Admin] все заказы
-/// POST /api/orders/{id}/approve     → [Admin] одобрить
-/// POST /api/orders/{id}/decline     → [Admin] отклонить
-/// </summary>
 [Route("api/[controller]")]
 [ApiController]
 [Authorize]
@@ -28,7 +18,7 @@ public class OrdersController : ControllerBase
         _orderService = orderService;
     }
 
-    /// <summary>Create a new checkout request</summary>
+    // create new order
     [HttpPost]
     public async Task<ActionResult<OrderDto>> Create([FromBody] OrderCreateDto dto)
     {
@@ -37,7 +27,7 @@ public class OrdersController : ControllerBase
         return CreatedAtAction(nameof(GetById), new { id = order.Id }, order);
     }
 
-    /// <summary>Get my orders (all)</summary>
+    // get all my orders
     [HttpGet("my")]
     public async Task<ActionResult<IEnumerable<OrderDto>>> GetMy()
     {
@@ -46,7 +36,7 @@ public class OrdersController : ControllerBase
         return Ok(orders);
     }
 
-    /// <summary>Get my orders paginated</summary>
+    // get my orders with paging
     [HttpGet("my/paged")]
     public async Task<ActionResult> GetMyPaged(
         [FromQuery] int page = 1,
@@ -64,7 +54,7 @@ public class OrdersController : ControllerBase
         });
     }
 
-    /// <summary>Get order by ID</summary>
+    // get order by id (checks owner/admin)
     [HttpGet("{id}")]
     public async Task<ActionResult<OrderDto>> GetById(int id)
     {
@@ -74,7 +64,7 @@ public class OrdersController : ControllerBase
         return Ok(order);
     }
 
-    /// <summary>Cancel my order</summary>
+    // cancel own order
     [HttpPost("{id}/cancel")]
     public async Task<ActionResult<OrderDto>> Cancel(int id)
     {
@@ -83,9 +73,7 @@ public class OrdersController : ControllerBase
         return Ok(order);
     }
 
-    // ── Admin endpoints ───────────────────────────────────────────────────
-
-    /// <summary>Get all orders paginated [Admin]</summary>
+    // admin: list all orders
     [HttpGet]
     [Authorize(Roles = "Admin")]
     public async Task<ActionResult> GetAll(
@@ -104,7 +92,7 @@ public class OrdersController : ControllerBase
         });
     }
 
-    /// <summary>Approve an order [Admin]</summary>
+    // admin: approve order
     [HttpPost("{id}/approve")]
     [Authorize(Roles = "Admin")]
     public async Task<ActionResult<OrderDto>> Approve(int id)
@@ -113,7 +101,7 @@ public class OrdersController : ControllerBase
         return Ok(order);
     }
 
-    /// <summary>Decline an order and refund credits [Admin]</summary>
+    // admin: decline order and refund
     [HttpPost("{id}/decline")]
     [Authorize(Roles = "Admin")]
     public async Task<ActionResult<OrderDto>> Decline(int id, [FromBody] string? reason = null)
@@ -122,4 +110,3 @@ public class OrdersController : ControllerBase
         return Ok(order);
     }
 }
-

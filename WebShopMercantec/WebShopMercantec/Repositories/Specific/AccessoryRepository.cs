@@ -3,10 +3,6 @@ using WebShopMercantec.Models;
 
 namespace WebShopMercantec.Repositories.Specific;
 
-/// <summary>
-/// Accessory Repository Implementation
-/// Реализация репозитория для работы с аксессуарами
-/// </summary>
 public class AccessoryRepository : Repository<Accessory>, IAccessoryRepository
 {
     private const int DefaultLowStockThreshold = 5;
@@ -15,13 +11,7 @@ public class AccessoryRepository : Repository<Accessory>, IAccessoryRepository
     {
     }
 
-    /// <summary>
-    /// Получить доступные аксессуары
-    /// Условия:
-    /// - Requestable = true (можно запросить)
-    /// - Qty > 0 (есть в наличии)
-    /// - DeletedAt = null (не удалено)
-    /// </summary>
+    
     public async Task<IEnumerable<Accessory>> GetAvailableAccessoriesAsync()
     {
         return await ApplyAvailableAccessoryFilter(_dbSet.AsNoTracking())
@@ -29,9 +19,7 @@ public class AccessoryRepository : Repository<Accessory>, IAccessoryRepository
             .ToListAsync();
     }
 
-    /// <summary>
-    /// Получить аксессуары по категории
-    /// </summary>
+    
     public async Task<IEnumerable<Accessory>> GetByCategoryIdAsync(int categoryId)
     {
         return await _dbSet
@@ -40,9 +28,7 @@ public class AccessoryRepository : Repository<Accessory>, IAccessoryRepository
             .ToListAsync();
     }
 
-    /// <summary>
-    /// Получить аксессуары по производителю
-    /// </summary>
+    
     public async Task<IEnumerable<Accessory>> GetByManufacturerIdAsync(int manufacturerId)
     {
         return await _dbSet
@@ -51,9 +37,7 @@ public class AccessoryRepository : Repository<Accessory>, IAccessoryRepository
             .ToListAsync();
     }
 
-    /// <summary>
-    /// Получить аксессуары по локации
-    /// </summary>
+    
     public async Task<IEnumerable<Accessory>> GetByLocationIdAsync(int locationId)
     {
         return await _dbSet
@@ -62,9 +46,7 @@ public class AccessoryRepository : Repository<Accessory>, IAccessoryRepository
             .ToListAsync();
     }
 
-    /// <summary>
-    /// Получить аксессуары по компании
-    /// </summary>
+    
     public async Task<IEnumerable<Accessory>> GetByCompanyIdAsync(uint companyId)
     {
         return await _dbSet
@@ -73,9 +55,7 @@ public class AccessoryRepository : Repository<Accessory>, IAccessoryRepository
             .ToListAsync();
     }
 
-    /// <summary>
-    /// Поиск аксессуаров по названию, номеру модели, заказу
-    /// </summary>
+    
     public async Task<IEnumerable<Accessory>> SearchAccessoriesAsync(string searchTerm)
     {
         var term = $"%{searchTerm.Trim()}%";
@@ -90,10 +70,7 @@ public class AccessoryRepository : Repository<Accessory>, IAccessoryRepository
             .ToListAsync();
     }
 
-    /// <summary>
-    /// Получить аксессуары с пагинацией и фильтрами
-    /// ОСНОВНОЙ МЕТОД ДЛЯ КАТАЛОГА АКСЕССУАРОВ
-    /// </summary>
+    
     public async Task<(IEnumerable<Accessory> Accessories, int TotalCount)> GetAccessoriesPagedAsync(
         int pageNumber,
         int pageSize,
@@ -148,10 +125,7 @@ public class AccessoryRepository : Repository<Accessory>, IAccessoryRepository
         return (accessories, totalCount);
     }
 
-    /// <summary>
-    /// Проверить доступность аксессуара
-    /// Проверяет, можно ли заказать указанное количество
-    /// </summary>
+    
     public async Task<bool> IsAvailableAsync(uint accessoryId, int requestedQuantity = 1)
     {
         var accessory = await _dbSet
@@ -164,9 +138,7 @@ public class AccessoryRepository : Repository<Accessory>, IAccessoryRepository
         return accessory.Requestable && accessory.Qty >= requestedQuantity;
     }
 
-    /// <summary>
-    /// Получить доступное количество аксессуара
-    /// </summary>
+    
     public async Task<int> GetAvailableQuantityAsync(uint accessoryId)
     {
         var accessory = await _dbSet
@@ -176,11 +148,7 @@ public class AccessoryRepository : Repository<Accessory>, IAccessoryRepository
         return accessory?.Qty ?? 0;
     }
 
-    /// <summary>
-    /// Получить аксессуары с низким запасом
-    /// Qty меньше или равно MinAmt (если MinAmt задан)
-    /// Или Qty меньше 5 (если MinAmt не задан)
-    /// </summary>
+    
     public async Task<IEnumerable<Accessory>> GetLowStockAccessoriesAsync()
     {
         return await _dbSet
@@ -196,10 +164,7 @@ public class AccessoryRepository : Repository<Accessory>, IAccessoryRepository
             .ToListAsync();
     }
 
-    /// <summary>
-    /// Получить аксессуары без запасов
-    /// Qty = 0
-    /// </summary>
+    
     public async Task<IEnumerable<Accessory>> GetOutOfStockAccessoriesAsync()
     {
         return await _dbSet
@@ -209,11 +174,7 @@ public class AccessoryRepository : Repository<Accessory>, IAccessoryRepository
             .ToListAsync();
     }
 
-    /// <summary>
-    /// Обновить количество аксессуара
-    /// quantityChange может быть положительным (добавление) или отрицательным (вычитание)
-    /// ВАЖНО: Не вызывает SaveChanges! Используйте через UnitOfWork
-    /// </summary>
+    
     public async Task<bool> UpdateQuantityAsync(uint accessoryId, int quantityChange)
     {
         var accessory = await _dbSet.FindAsync(accessoryId);
@@ -235,9 +196,7 @@ public class AccessoryRepository : Repository<Accessory>, IAccessoryRepository
 
     // === МЕТОДЫ ДЛЯ ПОЛУЧЕНИЯ ENRICHED ДАННЫХ (СО СВЯЗЯМИ) ===
 
-    /// <summary>
-    /// Получить доступные аксессуары со всеми связанными данными
-    /// </summary>
+    
     public async Task<IEnumerable<EnrichedAccessory>> GetAvailableAccessoriesEnrichedAsync()
     {
         var query = from accessory in _context.Accessories
@@ -268,9 +227,7 @@ public class AccessoryRepository : Repository<Accessory>, IAccessoryRepository
         return await query.AsNoTracking().OrderBy(e => e.Accessory.Name).ToListAsync();
     }
 
-    /// <summary>
-    /// Получить аксессуар по ID со всеми связанными данными
-    /// </summary>
+    
     public async Task<EnrichedAccessory?> GetEnrichedAccessoryByIdAsync(uint id)
     {
         var query = from accessory in _context.Accessories
@@ -295,9 +252,7 @@ public class AccessoryRepository : Repository<Accessory>, IAccessoryRepository
         return await query.AsNoTracking().FirstOrDefaultAsync();
     }
 
-    /// <summary>
-    /// Получить аксессуары с пагинацией СО СВЯЗЯМИ
-    /// </summary>
+    
     public async Task<(IEnumerable<EnrichedAccessory> Accessories, int TotalCount)> GetAccessoriesPagedEnrichedAsync(
         int pageNumber,
         int pageSize,

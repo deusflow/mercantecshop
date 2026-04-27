@@ -4,10 +4,9 @@ using WebShopMercantec.Mapping;
 
 namespace WebShopMercantec.Services;
 
-/// <summary>
-/// Сервис для работы с продуктами и аксессуарами
-/// Использует Repository Pattern с загрузкой связанных данных
-/// </summary>
+// Сервис для работы с продуктами и аксессуарами
+// Использует Repository Pattern с загрузкой связанных данных
+
 public class ProductService : IProductService
 {
     private readonly IUnitOfWork _unitOfWork;

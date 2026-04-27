@@ -2,9 +2,8 @@ using WebShopMercantec.Shared.DTOs;
 
 namespace WebShopMercantec.Services;
 
-/// <summary>
-/// Интерфейс сервиса для работы с продуктами (Assets)
-/// </summary>
+// Интерфейс сервиса для работы с продуктами (Assets)
+
 public interface IProductService
 {
     // === ОСНОВНЫЕ МЕТОДЫ ===

@@ -4,9 +4,8 @@ using WebShopMercantec.Services;
 
 namespace WebShopMercantec.Controllers;
 
-/// <summary>
-/// API контроллер для работы со статусами (StatusLabels)
-/// </summary>
+// API контроллер для работы со статусами (StatusLabels)
+
 [Route("api/[controller]")]
 [ApiController]
 public class StatusLabelsController : ControllerBase
@@ -18,9 +17,8 @@ public class StatusLabelsController : ControllerBase
         _statusLabelService = statusLabelService;
     }
 
-    /// <summary>
-    /// Получить все статусы
-    /// </summary>
+    // Получить все статусы
+    
     [HttpGet]
     public async Task<ActionResult<IEnumerable<StatusLabelDto>>> GetAll()
     {
@@ -28,9 +26,8 @@ public class StatusLabelsController : ControllerBase
         return Ok(statusLabels);
     }
 
-    /// <summary>
-    /// Получить статус по ID
-    /// </summary>
+    // Получить статус по ID
+    
     [HttpGet("{id}")]
     public async Task<ActionResult<StatusLabelDto>> GetById(int id)
     {
@@ -38,9 +35,8 @@ public class StatusLabelsController : ControllerBase
         return Ok(statusLabel);
     }
 
-    /// <summary>
-    /// Получить статусы, доступные для deployment (можно выдавать пользователям)
-    /// </summary>
+    // Получить статусы, доступные для deployment (можно выдавать пользователям)
+    
     [HttpGet("deployable")]
     public async Task<ActionResult<IEnumerable<StatusLabelDto>>> GetDeployable()
     {

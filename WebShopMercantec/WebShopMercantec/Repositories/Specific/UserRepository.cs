@@ -3,23 +3,14 @@ using WebShopMercantec.Models;
 
 namespace WebShopMercantec.Repositories.Specific;
 
-/// <summary>
-/// User Repository Implementation
-/// Реализация репозитория для работы с пользователями
-/// Наследуется от базового Repository и добавляет специфичные методы
-/// </summary>
 public class UserRepository : Repository<User>, IUserRepository
 {
-    /// <summary>
-    /// Конструктор - передает контекст в базовый класс
-    /// </summary>
+    
     public UserRepository(SnipeItContext context) : base(context)
     {
     }
 
-    /// <summary>
-    /// Найти пользователя по email (case-insensitive)
-    /// </summary>
+    
     public async Task<User?> GetByEmailAsync(string email)
     {
         var normalized = email.Trim();
@@ -29,9 +20,7 @@ public class UserRepository : Repository<User>, IUserRepository
             .FirstOrDefaultAsync(u => u.Email != null && u.Email == normalized);
     }
 
-    /// <summary>
-    /// Найти пользователя по username (case-insensitive)
-    /// </summary>
+    
     public async Task<User?> GetByUsernameAsync(string username)
     {
         var normalized = username.Trim();
@@ -41,10 +30,7 @@ public class UserRepository : Repository<User>, IUserRepository
             .FirstOrDefaultAsync(u => u.Username != null && u.Username == normalized);
     }
 
-    /// <summary>
-    /// Найти пользователя по email ИЛИ username
-    /// Проверяет оба поля одновременно
-    /// </summary>
+    
     public async Task<User?> GetByEmailOrUsernameAsync(string emailOrUsername)
     {
         var searchTerm = emailOrUsername.Trim();
@@ -56,9 +42,7 @@ public class UserRepository : Repository<User>, IUserRepository
                 (u.Username != null && u.Username == searchTerm));
     }
 
-    /// <summary>
-    /// Проверить существование email
-    /// </summary>
+    
     public async Task<bool> EmailExistsAsync(string email)
     {
         var normalized = email.Trim();
@@ -67,9 +51,7 @@ public class UserRepository : Repository<User>, IUserRepository
             .AnyAsync(u => u.Email != null && u.Email == normalized);
     }
 
-    /// <summary>
-    /// Проверить существование username
-    /// </summary>
+    
     public async Task<bool> UsernameExistsAsync(string username)
     {
         var normalized = username.Trim();
@@ -78,10 +60,7 @@ public class UserRepository : Repository<User>, IUserRepository
             .AnyAsync(u => u.Username != null && u.Username == normalized);
     }
 
-    /// <summary>
-    /// Получить всех активированных пользователей
-    /// Фильтруем по Activated = true и DeletedAt = null (не удаленные)
-    /// </summary>
+    
     public async Task<IEnumerable<User>> GetActivatedUsersAsync()
     {
         return await _dbSet
@@ -90,9 +69,7 @@ public class UserRepository : Repository<User>, IUserRepository
             .ToListAsync();
     }
 
-    /// <summary>
-    /// Получить пользователей по компании
-    /// </summary>
+    
     public async Task<IEnumerable<User>> GetByCompanyIdAsync(uint companyId)
     {
         return await _dbSet
@@ -101,9 +78,7 @@ public class UserRepository : Repository<User>, IUserRepository
             .ToListAsync();
     }
 
-    /// <summary>
-    /// Получить пользователей по локации
-    /// </summary>
+    
     public async Task<IEnumerable<User>> GetByLocationIdAsync(int locationId)
     {
         return await _dbSet
@@ -112,9 +87,7 @@ public class UserRepository : Repository<User>, IUserRepository
             .ToListAsync();
     }
 
-    /// <summary>
-    /// Получить пользователей по департаменту
-    /// </summary>
+    
     public async Task<IEnumerable<User>> GetByDepartmentIdAsync(int departmentId)
     {
         return await _dbSet
@@ -123,10 +96,7 @@ public class UserRepository : Repository<User>, IUserRepository
             .ToListAsync();
     }
 
-    /// <summary>
-    /// Получить пользователей для отображения в списках
-    /// ShowInList = true (по умолчанию true, но проверяем)
-    /// </summary>
+    
     public async Task<IEnumerable<User>> GetUsersForListAsync()
     {
         return await _dbSet
@@ -135,10 +105,7 @@ public class UserRepository : Repository<User>, IUserRepository
             .ToListAsync();
     }
 
-    /// <summary>
-    /// Поиск пользователей по строке
-    /// Ищем в FirstName, LastName, Email, Username
-    /// </summary>
+    
     public async Task<IEnumerable<User>> SearchUsersAsync(string searchTerm)
     {
         var term = $"%{searchTerm.Trim()}%";
@@ -154,10 +121,7 @@ public class UserRepository : Repository<User>, IUserRepository
             .ToListAsync();
     }
 
-    /// <summary>
-    /// Получить пользователей с пагинацией и множественными фильтрами
-    /// Самый сложный и полезный метод для админ-панели
-    /// </summary>
+    
     public async Task<(IEnumerable<User> Users, int TotalCount)> GetUsersPagedAsync(
         int pageNumber, 
         int pageSize, 

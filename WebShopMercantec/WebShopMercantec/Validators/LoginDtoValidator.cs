@@ -3,10 +3,6 @@ using WebShopMercantec.Shared.DTOs;
 
 namespace WebShopMercantec.Validators;
 
-/// <summary>
-/// Валидатор для LoginDto
-/// Проверяет корректность данных при входе в систему
-/// </summary>
 public class LoginDtoValidator : AbstractValidator<LoginDto>
 {
     public LoginDtoValidator()

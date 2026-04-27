@@ -6,10 +6,9 @@ using WebShopMercantec.Mapping;
 
 namespace WebShopMercantec.Services;
 
-/// <summary>
-/// Сервис для работы с категориями
-/// Использует Repository Pattern и обрабатывает бизнес-логику
-/// </summary>
+// Сервис для работы с категориями
+// Использует Repository Pattern и обрабатывает бизнес-логику
+
 public class CategoryService : ICategoryService
 {
     private readonly IUnitOfWork _unitOfWork;
@@ -21,10 +20,9 @@ public class CategoryService : ICategoryService
         _logger = logger;
     }
 
-    /// <summary>
-    /// Получить все активные категории с количеством элементов
-    /// Использует batch-запрос для подсчёта (2 SQL вместо N+1)
-    /// </summary>
+    // Получить все активные категории с количеством элементов
+    // Использует batch-запрос для подсчёта (2 SQL вместо N+1)
+    
     public async Task<IEnumerable<CategoryDto>> GetAllCategoriesAsync()
     {
         _logger.LogInformation("Getting all categories");
@@ -79,9 +77,8 @@ public class CategoryService : ICategoryService
         await _unitOfWork.SaveChangesAsync();
     }
 
-    /// <summary>
-    /// Получить категорию по ID
-    /// </summary>
+    // Получить категорию по ID
+    
     public async Task<CategoryDto?> GetCategoryByIdAsync(int id)
     {
         _logger.LogInformation("Getting category with ID: {CategoryId}", id);
@@ -99,9 +96,8 @@ public class CategoryService : ICategoryService
         return CategoryMapping.MapToDto(category, itemsCount);
     }
 
-    /// <summary>
-    /// Получить категории по типу
-    /// </summary>
+    // Получить категории по типу
+    
     public async Task<IEnumerable<CategoryDto>> GetCategoriesByTypeAsync(string categoryType)
     {
         _logger.LogInformation("Getting categories by type: {CategoryType}", categoryType);
@@ -114,9 +110,8 @@ public class CategoryService : ICategoryService
         ).ToList();
     }
 
-    /// <summary>
-    /// Создать новую категорию
-    /// </summary>
+    // Создать новую категорию
+    
     public async Task<CategoryDto> CreateCategoryAsync(CategoryDto categoryDto)
     {
         _logger.LogInformation("Creating new category: {CategoryName}", categoryDto.Name);
@@ -141,9 +136,8 @@ public class CategoryService : ICategoryService
         return CategoryMapping.MapToDto(category, 0);
     }
 
-    /// <summary>
-    /// Обновить существующую категорию
-    /// </summary>
+    // Обновить существующую категорию
+    
     public async Task<CategoryDto> UpdateCategoryAsync(int id, CategoryDto categoryDto)
     {
         _logger.LogInformation("Updating category: {CategoryId}", id);
@@ -171,9 +165,8 @@ public class CategoryService : ICategoryService
         return CategoryMapping.MapToDto(category, itemsCount);
     }
 
-    /// <summary>
-    /// Удалить категорию (soft delete)
-    /// </summary>
+    // Удалить категорию (soft delete)
+    
     public async Task DeleteCategoryAsync(int id)
     {
         _logger.LogInformation("Deleting category: {CategoryId}", id);

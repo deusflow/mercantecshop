@@ -1,8 +1,5 @@
 namespace WebShopMercantec.Configuration;
 
-/// <summary>
-/// Strongly-typed JWT settings (читаются из appsettings через IConfiguration)
-/// </summary>
 public class JwtSettings
 {
     public const string SectionName = "Jwt";

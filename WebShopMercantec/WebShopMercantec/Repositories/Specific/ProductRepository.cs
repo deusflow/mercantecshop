@@ -3,24 +3,13 @@ using WebShopMercantec.Models;
 
 namespace WebShopMercantec.Repositories.Specific;
 
-/// <summary>
-/// Product Repository Implementation
-/// Реализация репозитория для работы с продуктами (Assets)
-/// </summary>
 public class ProductRepository : Repository<Asset>, IProductRepository
 {
     public ProductRepository(SnipeItContext context) : base(context)
     {
     }
 
-    /// <summary>
-    /// Получить доступные для заказа продукты
-    /// Условия доступности (по реальным данным Snipe-IT):
-    /// - Статус входит в active status_labels с Deployable = 1
-    /// - Не удалено (DeletedAt = null)
-    /// - Можно запросить (Requestable = 1)
-    /// - Не назначено никому (AssignedTo = null)
-    /// </summary>
+    
     public async Task<IEnumerable<Asset>> GetAvailableProductsAsync()
     {
         var availabilityRules = await GetAvailabilityRulesAsync();
@@ -30,10 +19,7 @@ public class ProductRepository : Repository<Asset>, IProductRepository
             .ToListAsync();
     }
 
-    /// <summary>
-    /// Получить продукты по категории
-    /// Категория связана через Model -> CategoryId
-    /// </summary>
+    
     public async Task<IEnumerable<Asset>> GetByCategoryAsync(int categoryId)
     {
         var modelIds = await GetModelIdsByCategoryAsync(categoryId);
@@ -49,9 +35,7 @@ public class ProductRepository : Repository<Asset>, IProductRepository
             .ToListAsync();
     }
 
-    /// <summary>
-    /// Получить продукты по модели
-    /// </summary>
+    
     public async Task<IEnumerable<Asset>> GetByModelIdAsync(int modelId)
     {
         return await _dbSet
@@ -60,10 +44,7 @@ public class ProductRepository : Repository<Asset>, IProductRepository
             .ToListAsync();
     }
 
-    /// <summary>
-    /// Получить продукты по производителю
-    /// Производитель связан: Asset -> Model -> ManufacturerId
-    /// </summary>
+    
     public async Task<IEnumerable<Asset>> GetByManufacturerAsync(int manufacturerId)
     {
         var modelIds = await GetModelIdsByManufacturerAsync(manufacturerId);
@@ -79,9 +60,7 @@ public class ProductRepository : Repository<Asset>, IProductRepository
             .ToListAsync();
     }
 
-    /// <summary>
-    /// Получить продукты по статусу
-    /// </summary>
+    
     public async Task<IEnumerable<Asset>> GetByStatusIdAsync(int statusId)
     {
         return await _dbSet
@@ -90,9 +69,7 @@ public class ProductRepository : Repository<Asset>, IProductRepository
             .ToListAsync();
     }
 
-    /// <summary>
-    /// Получить продукты по локации
-    /// </summary>
+    
     public async Task<IEnumerable<Asset>> GetByLocationIdAsync(int locationId)
     {
         return await _dbSet
@@ -101,9 +78,7 @@ public class ProductRepository : Repository<Asset>, IProductRepository
             .ToListAsync();
     }
 
-    /// <summary>
-    /// Получить продукты, назначенные конкретному пользователю
-    /// </summary>
+    
     public async Task<IEnumerable<Asset>> GetAssignedToUserAsync(int userId)
     {
         return await _dbSet
@@ -115,9 +90,7 @@ public class ProductRepository : Repository<Asset>, IProductRepository
             .ToListAsync();
     }
 
-    /// <summary>
-    /// Поиск продуктов по названию, asset tag или серийному номеру
-    /// </summary>
+    
     public async Task<IEnumerable<Asset>> SearchProductsAsync(string searchTerm)
     {
         var term = $"%{searchTerm.Trim()}%";
@@ -132,10 +105,7 @@ public class ProductRepository : Repository<Asset>, IProductRepository
             .ToListAsync();
     }
 
-    /// <summary>
-    /// Получить продукты с пагинацией и множественными фильтрами
-    /// ЭТО ОСНОВНОЙ МЕТОД ДЛЯ КАТАЛОГА МАГАЗИНА!
-    /// </summary>
+    
     public async Task<(IEnumerable<Asset> Products, int TotalCount)> GetProductsPagedAsync(
         int pageNumber,
         int pageSize,
@@ -223,9 +193,7 @@ public class ProductRepository : Repository<Asset>, IProductRepository
         return (products, totalCount);
     }
 
-    /// <summary>
-    /// Проверить, доступен ли продукт для заказа
-    /// </summary>
+    
     public async Task<bool> IsAvailableForCheckoutAsync(uint assetId)
     {
         var availabilityRules = await GetAvailabilityRulesAsync();
@@ -242,10 +210,7 @@ public class ProductRepository : Repository<Asset>, IProductRepository
                 a.AssignedTo == null);
     }
 
-    /// <summary>
-    /// Получить продукт по Asset Tag
-    /// Asset Tag - это уникальный идентификатор (как штрих-код)
-    /// </summary>
+    
     public async Task<Asset?> GetByAssetTagAsync(string assetTag)
     {
         var normalizedTag = assetTag.Trim();
@@ -258,9 +223,7 @@ public class ProductRepository : Repository<Asset>, IProductRepository
                 a.DeletedAt == null);
     }
 
-    /// <summary>
-    /// Получить архивированные продукты
-    /// </summary>
+    
     public async Task<IEnumerable<Asset>> GetArchivedProductsAsync()
     {
         return await _dbSet
@@ -269,10 +232,7 @@ public class ProductRepository : Repository<Asset>, IProductRepository
             .ToListAsync();
     }
 
-    /// <summary>
-    /// Получить продукты, требующие обслуживания
-    /// Проверяем NextAuditDate - если дата прошла, нужен аудит
-    /// </summary>
+    
     public async Task<IEnumerable<Asset>> GetProductsRequiringMaintenanceAsync()
     {
         var today = DateOnly.FromDateTime(DateTime.Today);
@@ -288,10 +248,7 @@ public class ProductRepository : Repository<Asset>, IProductRepository
 
     // === МЕТОДЫ С ЗАГРУЗКОЙ СВЯЗЕЙ ===
 
-    /// <summary>
-    /// MariaDB-safe composition: грузим base assets и связанные сущности отдельными запросами,
-    /// затем склеиваем в памяти без SQL APPLY/JOIN-конструкций.
-    /// </summary>
+    
     private async Task<List<AssetWithDetails>> ComposeAssetsWithDetailsAsync(List<Asset> assets)
     {
         if (assets.Count == 0)

@@ -7,10 +7,7 @@ using WebShopMercantec.Shared.DTOs;
 
 namespace WebShopMercantec.Services;
 
-/// <summary>
-/// Handles login, register, refresh token and "who am I" lookups.
-/// Snipe-IT passwords use Laravel bcrypt ($2y$ prefix) — we convert to $2a$ for BCrypt.Net.
-/// </summary>
+// handles login, register, refresh token and account info
 public class AuthService : IAuthService
 {
     private readonly IUnitOfWork _unitOfWork;
@@ -30,7 +27,7 @@ public class AuthService : IAuthService
         _logger = logger;
     }
 
-    // ─── Login ────────────────────────────────────────────────────────────
+    // ─ Login 
 
     public async Task<AuthResponseDto> LoginAsync(LoginDto dto)
     {
@@ -47,8 +44,7 @@ public class AuthService : IAuthService
         if (!VerifyPassword(dto.Password, user.Password))
             throw new UnauthorizedException("Invalid username or password");
 
-        // Snipe-IT users table can reject updates (constraints/triggers we don't control).
-        // LastLogin is best-effort and must never block successful login.
+        // best effort update of last login, don't block login if it fails
         try
         {
             var trackedUser = await _unitOfWork.Users.GetByIdAsync(user.Id);
@@ -73,7 +69,7 @@ public class AuthService : IAuthService
         return BuildAuthResponse(user, accessToken, refreshToken, expiresAt);
     }
 
-    // ─── Register ─────────────────────────────────────────────────────────
+    // ─ Register 
 
     public async Task<AuthResponseDto> RegisterAsync(RegisterDto dto)
     {
@@ -88,6 +84,7 @@ public class AuthService : IAuthService
         var locationId = dto.LocationId is 0 ? null : dto.LocationId;
         var departmentId = dto.DepartmentId is 0 ? null : dto.DepartmentId;
 
+        // validate location and department if provided
         if (locationId.HasValue)
         {
             var locationExists = await _unitOfWork.Context.Locations
@@ -106,7 +103,7 @@ public class AuthService : IAuthService
                 throw new BadRequestException($"Department '{departmentId.Value}' does not exist");
         }
 
-        // Hash password using BCrypt ($2a$ — compatible with Snipe-IT $2y$ on verify)
+        // hash password for storage
         var hashedPassword = BCrypt.Net.BCrypt.HashPassword(dto.Password, workFactor: 12);
 
         var user = new User
@@ -134,7 +131,7 @@ public class AuthService : IAuthService
             await _unitOfWork.Users.AddAsync(user);
             await _unitOfWork.SaveChangesAsync();
 
-            // Init credit balance
+            // create initial zero credit balance
             var credits = new WebShopUserCredits
             {
                 UserId = user.Id,
@@ -160,7 +157,7 @@ public class AuthService : IAuthService
         }
     }
 
-    // ─── Refresh ──────────────────────────────────────────────────────────
+    // ─ Refresh 
 
     public async Task<AuthResponseDto> RefreshTokenAsync(string refreshToken)
     {
@@ -173,13 +170,13 @@ public class AuthService : IAuthService
         if (user == null || user.DeletedAt != null)
             throw new UnauthorizedException("User not found");
 
-        // Rotate: revoke old, issue new
+        // rotate tokens: revoke old, issue new one
         stored.RevokedAt = DateTime.UtcNow;
 
         var (accessToken, newRefreshToken, expiresAt) = await CreateTokenPairAsync(user);
         stored.ReplacedByToken = HashToken(newRefreshToken);
 
-        // Transparent migration for legacy plaintext tokens.
+        // move legacy tokens to hashed format on use
         if (!string.Equals(stored.Token, hashedInput, StringComparison.OrdinalIgnoreCase))
             stored.Token = hashedInput;
 
@@ -189,7 +186,7 @@ public class AuthService : IAuthService
         return BuildAuthResponse(user, accessToken, newRefreshToken, expiresAt);
     }
 
-    // ─── Revoke ───────────────────────────────────────────────────────────
+    // ─ Revoke 
 
     public async Task RevokeTokenAsync(int userId, string refreshToken)
     {
@@ -206,7 +203,7 @@ public class AuthService : IAuthService
         await _unitOfWork.SaveChangesAsync();
     }
 
-    // ─── Current user ────────────────────────────────────────────────────
+    // ─ Current user 
 
     public async Task<UserDto?> GetCurrentUserAsync(int userId)
     {
@@ -220,8 +217,9 @@ public class AuthService : IAuthService
         return UserMapping.MapToDto(user, credits);
     }
 
-    // ─── Helpers ─────────────────────────────────────────────────────────
+    // ─ Helpers 
 
+    // creates jwt and refresh token pair
     private async Task<(string accessToken, string refreshToken, DateTime expiresAt)>
         CreateTokenPairAsync(User user)
     {
@@ -243,6 +241,7 @@ public class AuthService : IAuthService
         return (accessToken, rawRefresh, expiresAt);
     }
 
+    // finds refresh token, supports both hashed and legacy plaintext entries
     private async Task<(RefreshToken? token, string hashedInput)> FindRefreshTokenForValidationAsync(
         string rawRefreshToken,
         uint? userId = null)
@@ -262,6 +261,7 @@ public class AuthService : IAuthService
         return (token, hashed);
     }
 
+    // sha256 hash for secure storage of refresh tokens
     private static string HashToken(string token)
     {
         using var sha = System.Security.Cryptography.SHA256.Create();
@@ -281,9 +281,7 @@ public class AuthService : IAuthService
         };
     }
 
-    /// <summary>
-    /// Verify BCrypt password — handles Laravel's $2y$ prefix
-    /// </summary>
+    // verify password, handles laravel $2y$ vs .net $2a$ format differences
     private static bool VerifyPassword(string plainPassword, string storedHash)
     {
         try

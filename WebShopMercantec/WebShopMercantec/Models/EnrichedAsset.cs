@@ -1,9 +1,5 @@
 namespace WebShopMercantec.Models;
 
-/// <summary>
-/// Расширенная модель Asset с подгруженными связанными данными
-/// Используется для маппинга в ProductDto с полной информацией
-/// </summary>
 public class EnrichedAsset
 {
     public Asset Asset { get; set; } = null!;

@@ -1,10 +1,5 @@
 namespace WebShopMercantec.Models;
 
-/// <summary>
-/// Projection record для Asset со связанными данными.
-/// Используется для загрузки данных из нескольких таблиц одним запросом
-/// (без navigation properties в scaffolded моделях).
-/// </summary>
 public record AssetWithDetails(
     Asset Asset,
     Model? Model,
@@ -14,9 +9,6 @@ public record AssetWithDetails(
     Location? Location,
     Supplier? Supplier);
 
-/// <summary>
-/// Projection record для Accessory со связанными данными.
-/// </summary>
 public record AccessoryWithDetails(
     Accessory Accessory,
     Category? Category,
