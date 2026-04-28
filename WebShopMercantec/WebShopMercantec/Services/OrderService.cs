@@ -122,6 +122,12 @@ public class OrderService : IOrderService
         if (order.FulfilledAt != null) throw new BadRequestException("Cannot cancel a fulfilled order");
         if (order.CanceledAt != null) throw new BadRequestException("Order is already canceled");
 
+        // check 5 minutes window
+        if (order.CreatedAt.HasValue && order.CreatedAt.Value.AddMinutes(5) < DateTime.UtcNow)
+        {
+            throw new BadRequestException("Отмена заказа возможна только в течение 5 минут после оформления. Пожалуйста, обратитесь в поддержку.");
+        }
+
         // refund user credits on cancellation
         var price = await GetOrderPriceAsync(order);
         if (price > 0)

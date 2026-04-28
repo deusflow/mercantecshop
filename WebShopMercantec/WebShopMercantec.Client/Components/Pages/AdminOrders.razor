@@ -1,0 +1,187 @@
+@page "/admin/orders"
+@using WebShopMercantec.Shared.DTOs
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "Admin,Super Admin")]
+@inject HttpClient Http
+
+<PageTitle>Управление заказами</PageTitle>
+
+<div class="container mt-4">
+    <h2>Управление заказами</h2>
+
+    @if (_loading)
+    {
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Загрузка...</span>
+        </div>
+    }
+    else if (_error != null)
+    {
+        <div class="alert alert-danger">@_error</div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-striped table-hover mt-3">
+                <thead class="table-dark">
+                    <tr>
+                        <th>ID</th>
+                        <th>Пользователь</th>
+                        <th>Товар</th>
+                        <th>Тип</th>
+                        <th>Кол-во</th>
+                        <th>Дата создания</th>
+                        <th>Статус</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var order in _orders)
+                    {
+                        <tr>
+                            <td>@order.Id</td>
+                            <td>@order.UserName</td>
+                            <td>@order.ProductName</td>
+                            <td>@(order.RequestableType.Contains("Asset") ? "Устройство" : "Аксессуар")</td>
+                            <td>@order.Quantity</td>
+                            <td>@order.CreatedAt?.ToLocalTime().ToString("g")</td>
+                            <td>
+                                @if (order.Status == "Pending")
+                                {
+                                    <span class="badge bg-warning text-dark">В ожидании</span>
+                                }
+                                else if (order.Status == "Fulfilled")
+                                {
+                                    <span class="badge bg-success">Выполнен</span>
+                                }
+                                else if (order.Status == "Canceled" || order.Status == "Declined")
+                                {
+                                    <span class="badge bg-danger">Отменен</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">@order.Status</span>
+                                }
+                            </td>
+                            <td>
+                                @if (order.Status == "Pending")
+                                {
+                                    <button class="btn btn-sm btn-success me-1" @onclick="() => ApproveOrder(order.Id)">
+                                        <i class="bi bi-check-circle"></i> Одобрить
+                                    </button>
+                                    <button class="btn btn-sm btn-danger" @onclick="() => DeclineOrder(order.Id)">
+                                        <i class="bi bi-x-circle"></i> Отклонить
+                                    </button>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        
+        @if (_totalPages > 1)
+        {
+            <nav>
+                <ul class="pagination">
+                    <li class="page-item @(_currentPage == 1 ? "disabled" : "")">
+                        <button class="page-link" @onclick="() => LoadOrders(_currentPage - 1)">Назад</button>
+                    </li>
+                    <li class="page-item disabled">
+                        <span class="page-link">Стр. @_currentPage из @_totalPages</span>
+                    </li>
+                    <li class="page-item @(_currentPage == _totalPages ? "disabled" : "")">
+                        <button class="page-link" @onclick="() => LoadOrders(_currentPage + 1)">Вперед</button>
+                    </li>
+                </ul>
+            </nav>
+        }
+    }
+</div>
+
+@code {
+    private List<OrderDto> _orders = new();
+    private bool _loading = true;
+    private string? _error;
+    
+    private int _currentPage = 1;
+    private int _pageSize = 20;
+    private int _totalCount = 0;
+    private int _totalPages => (int)Math.Ceiling((double)_totalCount / _pageSize);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadOrders(1);
+    }
+
+    private async Task LoadOrders(int page)
+    {
+        _loading = true;
+        _error = null;
+        _currentPage = page;
+
+        try
+        {
+            var result = await Http.GetFromJsonAsync<PagedResult<OrderDto>>($"api/orders?page={page}&pageSize={_pageSize}");
+            if (result != null)
+            {
+                _orders = result.Items;
+                _totalCount = result.TotalCount;
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = "Ошибка загрузки заказов: " + ex.Message;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task ApproveOrder(int id)
+    {
+        try
+        {
+            var res = await Http.PostAsync($"api/orders/{id}/approve", null);
+            if (res.IsSuccessStatusCode)
+            {
+                await LoadOrders(_currentPage);
+            }
+            else
+            {
+                _error = "Не удалось одобрить заказ";
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = "Ошибка при одобрении: " + ex.Message;
+        }
+    }
+
+    private async Task DeclineOrder(int id)
+    {
+        try
+        {
+            var res = await Http.PostAsync($"api/orders/{id}/decline", null);
+            if (res.IsSuccessStatusCode)
+            {
+                await LoadOrders(_currentPage);
+            }
+            else
+            {
+                _error = "Не удалось отклонить заказ";
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = "Ошибка при отклонении: " + ex.Message;
+        }
+    }
+
+    private class PagedResult<T>
+    {
+        public List<T> Items { get; set; } = new();
+        public int TotalCount { get; set; }
+    }
+}
