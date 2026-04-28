@@ -4,7 +4,7 @@ using WebShopMercantec.Client.Auth;
 
 namespace WebShopMercantec.Client.Http;
 
-public sealed class JwtHttpMessageHandler(ITokenStore tokenStore, AuthStateProvider authStateProvider) : DelegatingHandler
+public sealed class JwtHttpMessageHandler(ITokenStore tokenStore, AuthStateProvider authStateProvider, Microsoft.AspNetCore.Components.NavigationManager navManager) : DelegatingHandler
 {
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
@@ -16,12 +16,12 @@ public sealed class JwtHttpMessageHandler(ITokenStore tokenStore, AuthStateProvi
 
         var response = await base.SendAsync(request, cancellationToken);
 
-        if (response.StatusCode == HttpStatusCode.Unauthorized)
+        if (response.StatusCode == HttpStatusCode.Unauthorized || response.StatusCode == HttpStatusCode.Forbidden)
         {
             await authStateProvider.MarkUserLoggedOutAsync();
+            navManager.NavigateTo("/login?error=session_expired");
         }
 
         return response;
     }
 }
-

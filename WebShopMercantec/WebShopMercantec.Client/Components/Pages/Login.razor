@@ -64,9 +64,20 @@
 </div>
 
 @code {
+    [SupplyParameterFromQuery]
+    public string? Error { get; set; }
+
     private readonly LoginDto _model = new LoginDto();
     private bool _isBusy;
     private string? _error;
+
+    protected override void OnInitialized()
+    {
+        if (Error == "session_expired")
+        {
+            _error = "Your session has expired. Please log in again.";
+        }
+    }
 
     private async Task SubmitAsync()
     {
@@ -107,4 +118,3 @@
     
    
 }
-

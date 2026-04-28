@@ -18,7 +18,7 @@ public class CreditService : ICreditService
 
     public async Task<decimal> GetBalanceAsync(uint userId)
     {
-        var credits = await GetOrCreateCreditsAsync(userId);
+        var credits = await GetOrCreateCreditsAsync(userId, saveChanges: true);
         return credits.AvailableCredits;
     }
 
@@ -28,82 +28,48 @@ public class CreditService : ICreditService
         return balance >= amount;
     }
 
-    public async Task<TransactionDto> AddCreditsAsync(uint userId, decimal amount, string reason, int? relatedOrderId = null)
+    public async Task<TransactionDto> AddCreditsAsync(uint userId, decimal amount, string reason, int? relatedOrderId = null, bool saveChanges = true)
     {
         if (amount <= 0) throw new BadRequestException("Credit amount must be positive");
 
-        var strategy = _unitOfWork.Context.Database.CreateExecutionStrategy();
-        return await strategy.ExecuteAsync(async () =>
-        {
-            var ownsTransaction = _unitOfWork.Context.Database.CurrentTransaction == null;
-            if (ownsTransaction)
-                await _unitOfWork.BeginTransactionAsync();
+        var credits = await GetOrCreateCreditsAsync(userId, saveChanges);
+        var before = credits.AvailableCredits;
 
-            try
-            {
-                var credits = await GetOrCreateCreditsAsync(userId);
-                var before = credits.AvailableCredits;
+        credits.AvailableCredits += amount;
+        credits.UpdatedAt = DateTime.UtcNow;
+        _unitOfWork.Context.WebShopUserCredits.Update(credits);
 
-                credits.AvailableCredits += amount;
-                credits.UpdatedAt = DateTime.UtcNow;
-                _unitOfWork.Context.WebShopUserCredits.Update(credits);
+        var tx = await RecordTransactionAsync(userId, amount, "credit", reason, before, credits.AvailableCredits, relatedOrderId);
+        
+        if (saveChanges)
+            await _unitOfWork.SaveChangesAsync();
 
-                var tx = await RecordTransactionAsync(userId, amount, "credit", reason, before, credits.AvailableCredits, relatedOrderId);
-                await _unitOfWork.SaveChangesAsync();
-                if (ownsTransaction)
-                    await _unitOfWork.CommitTransactionAsync();
-
-                _logger.LogInformation("Added {Amount} credits to user {UserId}. Balance: {Balance}", amount, userId, credits.AvailableCredits);
-                return MapTransaction(tx);
-            }
-            catch
-            {
-                if (ownsTransaction)
-                    await _unitOfWork.RollbackTransactionAsync();
-                throw;
-            }
-        });
+        _logger.LogInformation("Added {Amount} credits to user {UserId}. Balance: {Balance}", amount, userId, credits.AvailableCredits);
+        return MapTransaction(tx);
     }
 
-    public async Task<TransactionDto> DeductCreditsAsync(uint userId, decimal amount, string reason, int? relatedOrderId = null)
+    public async Task<TransactionDto> DeductCreditsAsync(uint userId, decimal amount, string reason, int? relatedOrderId = null, bool saveChanges = true)
     {
         if (amount <= 0) throw new BadRequestException("Debit amount must be positive");
 
-        var strategy = _unitOfWork.Context.Database.CreateExecutionStrategy();
-        return await strategy.ExecuteAsync(async () =>
-        {
-            var ownsTransaction = _unitOfWork.Context.Database.CurrentTransaction == null;
-            if (ownsTransaction)
-                await _unitOfWork.BeginTransactionAsync();
+        var credits = await GetOrCreateCreditsAsync(userId, saveChanges);
 
-            try
-            {
-                var credits = await GetOrCreateCreditsAsync(userId);
+        if (credits.AvailableCredits < amount)
+            throw new InsufficientCreditsException(amount, credits.AvailableCredits);
 
-                if (credits.AvailableCredits < amount)
-                    throw new InsufficientCreditsException(amount, credits.AvailableCredits);
+        var before = credits.AvailableCredits;
+        credits.AvailableCredits -= amount;
+        credits.TotalSpent += amount;
+        credits.UpdatedAt = DateTime.UtcNow;
+        _unitOfWork.Context.WebShopUserCredits.Update(credits);
 
-                var before = credits.AvailableCredits;
-                credits.AvailableCredits -= amount;
-                credits.TotalSpent += amount;
-                credits.UpdatedAt = DateTime.UtcNow;
-                _unitOfWork.Context.WebShopUserCredits.Update(credits);
+        var tx = await RecordTransactionAsync(userId, -amount, "debit", reason, before, credits.AvailableCredits, relatedOrderId);
+        
+        if (saveChanges)
+            await _unitOfWork.SaveChangesAsync();
 
-                var tx = await RecordTransactionAsync(userId, -amount, "debit", reason, before, credits.AvailableCredits, relatedOrderId);
-                await _unitOfWork.SaveChangesAsync();
-                if (ownsTransaction)
-                    await _unitOfWork.CommitTransactionAsync();
-
-                _logger.LogInformation("Deducted {Amount} credits from user {UserId}. Balance: {Balance}", amount, userId, credits.AvailableCredits);
-                return MapTransaction(tx);
-            }
-            catch
-            {
-                if (ownsTransaction)
-                    await _unitOfWork.RollbackTransactionAsync();
-                throw;
-            }
-        });
+        _logger.LogInformation("Deducted {Amount} credits from user {UserId}. Balance: {Balance}", amount, userId, credits.AvailableCredits);
+        return MapTransaction(tx);
     }
 
     public async Task<IEnumerable<TransactionDto>> GetTransactionHistoryAsync(uint userId, int page = 1, int pageSize = 20)
@@ -121,10 +87,11 @@ public class CreditService : ICreditService
 
     // ─ Helpers 
 
-    private async Task<WebShopUserCredits> GetOrCreateCreditsAsync(uint userId)
+    private async Task<WebShopUserCredits> GetOrCreateCreditsAsync(uint userId, bool saveChanges = true)
     {
-        var credits = await _unitOfWork.Context.WebShopUserCredits
-            .FirstOrDefaultAsync(c => c.UserId == userId);
+        var credits = _unitOfWork.Context.WebShopUserCredits.Local
+            .FirstOrDefault(c => c.UserId == userId) 
+            ?? await _unitOfWork.Context.WebShopUserCredits.FirstOrDefaultAsync(c => c.UserId == userId);
 
         if (credits != null) return credits;
 
@@ -137,7 +104,10 @@ public class CreditService : ICreditService
             UpdatedAt = DateTime.UtcNow
         };
         await _unitOfWork.Context.WebShopUserCredits.AddAsync(credits);
-        await _unitOfWork.SaveChangesAsync();
+        
+        if (saveChanges)
+            await _unitOfWork.SaveChangesAsync();
+            
         return credits;
     }
 

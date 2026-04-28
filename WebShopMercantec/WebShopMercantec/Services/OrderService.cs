@@ -64,39 +64,29 @@ public class OrderService : IOrderService
         if (!await _creditService.HasSufficientCreditsAsync((uint)userId, price))
             throw new InsufficientCreditsException(price, await _creditService.GetBalanceAsync((uint)userId));
 
-        await _unitOfWork.BeginTransactionAsync();
-        try
+        // deduct credits immediately on order creation (deferred save)
+        if (price > 0)
+            await _creditService.DeductCreditsAsync((uint)userId, price, $"Purchase: {productName}", null, false);
+
+        // log the checkout request in the db
+        var order = new CheckoutRequest
         {
-            // deduct credits immediately on order creation
-            if (price > 0)
-                await _creditService.DeductCreditsAsync((uint)userId, price, $"Purchase: {productName}");
+            UserId = userId,
+            RequestableId = dto.RequestableId,
+            RequestableType = dto.RequestableType == "asset"
+                ? "App\\Models\\Asset"
+                : "App\\Models\\Accessory",
+            Quantity = dto.Quantity,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
 
-            // log the checkout request in the db
-            var order = new CheckoutRequest
-            {
-                UserId = userId,
-                RequestableId = dto.RequestableId,
-                RequestableType = dto.RequestableType == "asset"
-                    ? "App\\Models\\Asset"
-                    : "App\\Models\\Accessory",
-                Quantity = dto.Quantity,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            };
+        await _unitOfWork.Orders.AddAsync(order);
+        await _unitOfWork.SaveChangesAsync(); // execution strategy retries implicit transactions
 
-            await _unitOfWork.Orders.AddAsync(order);
-            await _unitOfWork.SaveChangesAsync();
-            await _unitOfWork.CommitTransactionAsync();
-
-            _logger.LogInformation("Order #{OrderId} created for user {UserId}", order.Id, userId);
-            var user = await _unitOfWork.Users.GetByIdAsync((uint)userId);
-            return OrderMapping.MapToDto(order, user, productName);
-        }
-        catch
-        {
-            await _unitOfWork.RollbackTransactionAsync();
-            throw;
-        }
+        _logger.LogInformation("Order #{OrderId} created for user {UserId}", order.Id, userId);
+        var user = await _unitOfWork.Users.GetByIdAsync((uint)userId);
+        return OrderMapping.MapToDto(order, user, productName);
     }
 
     // ─ Read 
@@ -132,28 +122,18 @@ public class OrderService : IOrderService
         if (order.FulfilledAt != null) throw new BadRequestException("Cannot cancel a fulfilled order");
         if (order.CanceledAt != null) throw new BadRequestException("Order is already canceled");
 
-        await _unitOfWork.BeginTransactionAsync();
-        try
-        {
-            // refund user credits on cancellation
-            var price = await GetOrderPriceAsync(order);
-            if (price > 0)
-                await _creditService.AddCreditsAsync((uint)userId, price, $"Refund: Order #{orderId} canceled", orderId);
+        // refund user credits on cancellation
+        var price = await GetOrderPriceAsync(order);
+        if (price > 0)
+            await _creditService.AddCreditsAsync((uint)userId, price, $"Refund: Order #{orderId} canceled", orderId, saveChanges: false);
 
-            order.CanceledAt = DateTime.UtcNow;
-            order.UpdatedAt = DateTime.UtcNow;
-            _unitOfWork.Orders.Update(order);
-            await _unitOfWork.SaveChangesAsync();
-            await _unitOfWork.CommitTransactionAsync();
+        order.CanceledAt = DateTime.UtcNow;
+        order.UpdatedAt = DateTime.UtcNow;
+        _unitOfWork.Orders.Update(order);
+        await _unitOfWork.SaveChangesAsync(); // atomic transaction
 
-            _logger.LogInformation("Order #{OrderId} canceled by user {UserId}", orderId, userId);
-            return OrderMapping.MapToDto(order);
-        }
-        catch
-        {
-            await _unitOfWork.RollbackTransactionAsync();
-            throw;
-        }
+        _logger.LogInformation("Order #{OrderId} canceled by user {UserId}", orderId, userId);
+        return OrderMapping.MapToDto(order);
     }
 
     // ─ Admin: Approve 
@@ -165,38 +145,28 @@ public class OrderService : IOrderService
         if (order.FulfilledAt != null) throw new BadRequestException("Order already fulfilled");
         if (order.CanceledAt != null) throw new BadRequestException("Cannot approve a canceled order");
 
-        await _unitOfWork.BeginTransactionAsync();
-        try
+        // if it's an asset, mark it as deployed to the user in Snipe-IT
+        if (order.RequestableType.Contains("Asset"))
         {
-            // if it's an asset, mark it as deployed to the user in Snipe-IT
-            if (order.RequestableType.Contains("Asset"))
+            var asset = await _unitOfWork.Products.GetByIdAsync((uint)order.RequestableId);
+            if (asset != null)
             {
-                var asset = await _unitOfWork.Products.GetByIdAsync((uint)order.RequestableId);
-                if (asset != null)
-                {
-                    asset.AssignedTo = order.UserId;
-                    asset.AssignedType = "App\\Models\\User";
-                    asset.StatusId = StatusDeployed;
-                    asset.LastCheckout = DateTime.UtcNow;
-                    asset.UpdatedAt = DateTime.UtcNow;
-                    _unitOfWork.Products.Update(asset);
-                }
+                asset.AssignedTo = order.UserId;
+                asset.AssignedType = "App\\Models\\User";
+                asset.StatusId = StatusDeployed;
+                asset.LastCheckout = DateTime.UtcNow;
+                asset.UpdatedAt = DateTime.UtcNow;
+                _unitOfWork.Products.Update(asset);
             }
-
-            order.FulfilledAt = DateTime.UtcNow;
-            order.UpdatedAt = DateTime.UtcNow;
-            _unitOfWork.Orders.Update(order);
-            await _unitOfWork.SaveChangesAsync();
-            await _unitOfWork.CommitTransactionAsync();
-
-            _logger.LogInformation("Order #{OrderId} approved", orderId);
-            return OrderMapping.MapToDto(order);
         }
-        catch
-        {
-            await _unitOfWork.RollbackTransactionAsync();
-            throw;
-        }
+
+        order.FulfilledAt = DateTime.UtcNow;
+        order.UpdatedAt = DateTime.UtcNow;
+        _unitOfWork.Orders.Update(order);
+        await _unitOfWork.SaveChangesAsync();
+
+        _logger.LogInformation("Order #{OrderId} approved", orderId);
+        return OrderMapping.MapToDto(order);
     }
 
     // ─ Admin: Decline 
@@ -208,31 +178,21 @@ public class OrderService : IOrderService
         if (order.FulfilledAt != null) throw new BadRequestException("Cannot decline a fulfilled order");
         if (order.CanceledAt != null) throw new BadRequestException("Order already canceled");
 
-        await _unitOfWork.BeginTransactionAsync();
-        try
-        {
-            // refund credits if order is declined by admin
-            var price = await GetOrderPriceAsync(order);
-            if (price > 0)
-                await _creditService.AddCreditsAsync(
-                    (uint)order.UserId, price,
-                    $"Refund: Order #{orderId} declined. {reason}".TrimEnd('.', ' '),
-                    orderId);
+        // refund credits if order is declined by admin
+        var price = await GetOrderPriceAsync(order);
+        if (price > 0)
+            await _creditService.AddCreditsAsync(
+                (uint)order.UserId, price,
+                $"Refund: Order #{orderId} declined. {reason}".TrimEnd('.', ' '),
+                orderId, saveChanges: false);
 
-            order.CanceledAt = DateTime.UtcNow;
-            order.UpdatedAt = DateTime.UtcNow;
-            _unitOfWork.Orders.Update(order);
-            await _unitOfWork.SaveChangesAsync();
-            await _unitOfWork.CommitTransactionAsync();
+        order.CanceledAt = DateTime.UtcNow;
+        order.UpdatedAt = DateTime.UtcNow;
+        _unitOfWork.Orders.Update(order);
+        await _unitOfWork.SaveChangesAsync(); // safe atomic trans commit
 
-            _logger.LogInformation("Order #{OrderId} declined", orderId);
-            return OrderMapping.MapToDto(order);
-        }
-        catch
-        {
-            await _unitOfWork.RollbackTransactionAsync();
-            throw;
-        }
+        _logger.LogInformation("Order #{OrderId} declined", orderId);
+        return OrderMapping.MapToDto(order);
     }
 
     public async Task<(IEnumerable<OrderDto> Orders, int TotalCount)> GetAllOrdersPagedAsync(

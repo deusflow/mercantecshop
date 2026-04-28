@@ -1,7 +1,9 @@
 @page "/product/{id:int}"
 @using WebShopMercantec.Shared.DTOs
+@using Microsoft.AspNetCore.Components.Authorization
 @inject HttpClient Http
 @inject NavigationManager Nav
+@inject AuthenticationStateProvider AuthStateProvider
 
 <PageTitle>Product Details - TechShop</PageTitle>
 
@@ -57,7 +59,7 @@
                     <span class="price-label">Price</span>
                     <span class="price-value">@_product.Price Credits</span>
                 </div>
-                
+
                 <div class="purchase-actions">
                     @if (!string.IsNullOrEmpty(_purchaseError))
                     {
@@ -71,10 +73,22 @@
                             @_purchaseSuccess
                         </div>
                     }
+                    @if (!string.IsNullOrEmpty(_authError))
+                    {
+                        <div class="alert alert-warning" role="alert" style="margin-bottom: 15px;">
+                            @_authError
+                        </div>
+                    }
 
                     @if (_product.IsAvailable)
                     {
-                        @if (!_showConfirm)
+                        @if (!_isAuthenticated)
+                        {
+                            <button class="btn btn-primary btn-large" style="width: 100%;" disabled>
+                                Sign in to purchase
+                            </button>
+                        }
+                        else if (!_showConfirm)
                         {
                             <button class="btn btn-primary btn-large" style="width: 100%;" @onclick="() => _showConfirm = true">
                                 Purchase with Credits
@@ -184,7 +198,9 @@
     private ProductDto? _product;
     private bool _isLoading;
     private string? _error;
-    
+
+    private bool _isAuthenticated;
+    private string? _authError;
     private bool _showConfirm;
     private bool _isPurchasing;
     private string? _purchaseError;
@@ -195,9 +211,13 @@
         _isLoading = true;
         _error = null;
         _product = null;
+        _authError = null;
 
         try
         {
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            _isAuthenticated = authState.User.Identity?.IsAuthenticated == true;
+
             _product = await Http.GetFromJsonAsync<ProductDto>($"/api/products/{Id}");
         }
         catch (Exception ex)
@@ -213,10 +233,18 @@
     private async Task PurchaseAsync()
     {
         if (_product == null || !_product.IsAvailable) return;
+        if (!_isAuthenticated)
+        {
+            _authError = "Only signed-in users can purchase.";
+            return;
+        }
+
+        if (_isPurchasing) return;
 
         _isPurchasing = true;
         _purchaseError = null;
         _purchaseSuccess = null;
+        _authError = null;
         _showConfirm = false; // Прячем блок подтверждения во время обработки
 
         try
@@ -235,14 +263,20 @@
             {
                 _purchaseSuccess = "Order placed successfully! Credits have been deducted.";
                 _product.IsAvailable = false; // Mark unavailable so user can't click twice
-                
-                // Optionally trigger a re-check of user's credits if we have a global state
             }
             else
             {
-                // Try reading specific error string if available
                 var errorText = await response.Content.ReadAsStringAsync();
-                _purchaseError = $"Failed to purchase: {errorText}";
+                if (errorText.Contains("InsufficientCredits", StringComparison.OrdinalIgnoreCase) || 
+                    errorText.Contains("insufficient credits", StringComparison.OrdinalIgnoreCase) ||
+                    errorText.Contains("affordable", StringComparison.OrdinalIgnoreCase))
+                {
+                    _purchaseError = "Insufficient credits. You do not have enough credits to purchase this item.";
+                }
+                else
+                {
+                    _purchaseError = $"Failed to purchase: {errorText}";
+                }
             }
         }
         catch (Exception ex)
