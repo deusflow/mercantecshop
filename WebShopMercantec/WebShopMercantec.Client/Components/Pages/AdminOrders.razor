@@ -42,7 +42,7 @@
                             <td>@order.Id</td>
                             <td>@order.UserName</td>
                             <td>@order.ProductName</td>
-                            <td>@(order.RequestableType.Contains("Asset") ? "device" : "accessory")</td>
+                            <td>@(order.RequestableType.Contains("Asset") ? "Device" : "Accessory")</td>
                             <td>@order.Quantity</td>
                             <td>@order.CreatedAt?.ToLocalTime().ToString("g")</td>
                             <td>
@@ -54,9 +54,13 @@
                                 {
                                     <span class="badge bg-success">Completed</span>
                                 }
-                                else if (order.Status == "Canceled" || order.Status == "Declined")
+                                else if (order.Status == "Canceled")
                                 {
                                     <span class="badge bg-danger">Canceled</span>
+                                }
+                                else if (order.Status == "Declined")
+                                {
+                                    <span class="badge bg-danger">Declined</span>
                                 }
                                 else
                                 {
@@ -70,7 +74,7 @@
                                         <i class="bi bi-check-circle"></i> Approve
                                     </button>
                                     <button class="btn btn-sm btn-danger" @onclick="() => DeclineOrder(order.Id)">
-                                        <i class="bi bi-x-circle"></i> Reject
+                                        <i class="bi bi-x-circle"></i> Decline
                                     </button>
                                 }
                             </td>

@@ -102,6 +102,8 @@ public class OrdersController : ControllerBase
     }
 
     // admin: decline order and refund
+    // NOTE: reason is optional and provided via query string to keep the endpoint callable with an empty POST body
+    // (many HTTP clients send no content for simple action endpoints).
     [HttpPost("{id}/decline")]
     [Authorize(Roles = "Admin")]
     public async Task<ActionResult<OrderDto>> Decline(int id, [FromBody] string? reason = null)
