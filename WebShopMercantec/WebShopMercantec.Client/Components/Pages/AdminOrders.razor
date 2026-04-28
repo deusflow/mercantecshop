@@ -4,15 +4,15 @@
 @attribute [Authorize(Roles = "Admin,Super Admin")]
 @inject HttpClient Http
 
-<PageTitle>Управление заказами</PageTitle>
+<PageTitle>Order management</PageTitle>
 
 <div class="container mt-4">
-    <h2>Управление заказами</h2>
+    <h2>Order management</h2>
 
     @if (_loading)
     {
         <div class="spinner-border text-primary" role="status">
-            <span class="visually-hidden">Загрузка...</span>
+            <span class="visually-hidden">Loading...</span>
         </div>
     }
     else if (_error != null)
@@ -26,13 +26,13 @@
                 <thead class="table-dark">
                     <tr>
                         <th>ID</th>
-                        <th>Пользователь</th>
-                        <th>Товар</th>
-                        <th>Тип</th>
-                        <th>Кол-во</th>
-                        <th>Дата создания</th>
-                        <th>Статус</th>
-                        <th>Действия</th>
+                        <th>User</th>
+                        <th>Product</th>
+                        <th>Type</th>
+                        <th>Quantity</th>
+                        <th>Creation date</th>
+                        <th>Status</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -42,21 +42,21 @@
                             <td>@order.Id</td>
                             <td>@order.UserName</td>
                             <td>@order.ProductName</td>
-                            <td>@(order.RequestableType.Contains("Asset") ? "Устройство" : "Аксессуар")</td>
+                            <td>@(order.RequestableType.Contains("Asset") ? "device" : "accessory")</td>
                             <td>@order.Quantity</td>
                             <td>@order.CreatedAt?.ToLocalTime().ToString("g")</td>
                             <td>
                                 @if (order.Status == "Pending")
                                 {
-                                    <span class="badge bg-warning text-dark">В ожидании</span>
+                                    <span class="badge bg-warning text-dark">Pending</span>
                                 }
                                 else if (order.Status == "Fulfilled")
                                 {
-                                    <span class="badge bg-success">Выполнен</span>
+                                    <span class="badge bg-success">Completed</span>
                                 }
                                 else if (order.Status == "Canceled" || order.Status == "Declined")
                                 {
-                                    <span class="badge bg-danger">Отменен</span>
+                                    <span class="badge bg-danger">Canceled</span>
                                 }
                                 else
                                 {
@@ -67,10 +67,10 @@
                                 @if (order.Status == "Pending")
                                 {
                                     <button class="btn btn-sm btn-success me-1" @onclick="() => ApproveOrder(order.Id)">
-                                        <i class="bi bi-check-circle"></i> Одобрить
+                                        <i class="bi bi-check-circle"></i> Approve
                                     </button>
                                     <button class="btn btn-sm btn-danger" @onclick="() => DeclineOrder(order.Id)">
-                                        <i class="bi bi-x-circle"></i> Отклонить
+                                        <i class="bi bi-x-circle"></i> Reject
                                     </button>
                                 }
                             </td>
@@ -85,13 +85,13 @@
             <nav>
                 <ul class="pagination">
                     <li class="page-item @(_currentPage == 1 ? "disabled" : "")">
-                        <button class="page-link" @onclick="() => LoadOrders(_currentPage - 1)">Назад</button>
+                        <button class="page-link" @onclick="() => LoadOrders(_currentPage - 1)">Back</button>
                     </li>
                     <li class="page-item disabled">
                         <span class="page-link">Стр. @_currentPage из @_totalPages</span>
                     </li>
                     <li class="page-item @(_currentPage == _totalPages ? "disabled" : "")">
-                        <button class="page-link" @onclick="() => LoadOrders(_currentPage + 1)">Вперед</button>
+                        <button class="page-link" @onclick="() => LoadOrders(_currentPage + 1)">Next</button>
                     </li>
                 </ul>
             </nav>
