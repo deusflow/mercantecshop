@@ -1,5 +1,7 @@
 @page "/product/{id:int}"
+@using WebShopMercantec.Shared.DTOs
 @inject HttpClient Http
+@inject NavigationManager Nav
 
 <PageTitle>Product Details - TechShop</PageTitle>
 
@@ -57,9 +59,55 @@
                 </div>
                 
                 <div class="purchase-actions">
-                    <button class="btn btn-primary btn-large" style="width: 100%;">
-                        Purchase with Credits
-                    </button>
+                    @if (!string.IsNullOrEmpty(_purchaseError))
+                    {
+                        <div class="alert alert-danger" role="alert" style="margin-bottom: 15px;">
+                            @_purchaseError
+                        </div>
+                    }
+                    @if (!string.IsNullOrEmpty(_purchaseSuccess))
+                    {
+                        <div class="alert alert-success" role="alert" style="margin-bottom: 15px;">
+                            @_purchaseSuccess
+                        </div>
+                    }
+
+                    @if (_product.IsAvailable)
+                    {
+                        @if (!_showConfirm)
+                        {
+                            <button class="btn btn-primary btn-large" style="width: 100%;" @onclick="() => _showConfirm = true">
+                                Purchase with Credits
+                            </button>
+                        }
+                        else
+                        {
+                            <div class="confirmation-box fade-in" style="background: var(--color-surface, #1a1a1c); padding: 15px; border-radius: 8px; text-align: center; border: 1px solid var(--color-border-subtle, #333);">
+                                <p style="margin-bottom: 15px; font-weight: 500;">Confirm purchase for <strong>@_product.Price credits</strong>?</p>
+                                <div style="display: flex; gap: 10px;">
+                                    <button class="btn btn-primary" style="flex: 1; background-color: var(--color-success, #30d158);" disabled="@_isPurchasing" @onclick="PurchaseAsync">
+                                        @if (_isPurchasing)
+                                        {
+                                            <span>Processing...</span>
+                                        }
+                                        else
+                                        {
+                                            <span>Yes, Buy</span>
+                                        }
+                                    </button>
+                                    <button class="btn btn-secondary" style="flex: 1;" disabled="@_isPurchasing" @onclick="() => _showConfirm = false">
+                                        Cancel
+                                    </button>
+                                </div>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <button class="btn btn-primary btn-large" style="width: 100%; background-color: #666; cursor: not-allowed;" disabled>
+                            Out of Stock
+                        </button>
+                    }
                 </div>
                 
                 <p class="purchase-info">
@@ -136,6 +184,11 @@
     private ProductDto? _product;
     private bool _isLoading;
     private string? _error;
+    
+    private bool _showConfirm;
+    private bool _isPurchasing;
+    private string? _purchaseError;
+    private string? _purchaseSuccess;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -156,5 +209,50 @@
             _isLoading = false;
         }
     }
-}
 
+    private async Task PurchaseAsync()
+    {
+        if (_product == null || !_product.IsAvailable) return;
+
+        _isPurchasing = true;
+        _purchaseError = null;
+        _purchaseSuccess = null;
+        _showConfirm = false; // Прячем блок подтверждения во время обработки
+
+        try
+        {
+            var order = new OrderCreateDto
+            {
+                RequestableId = _product.Id,
+                RequestableType = "asset", // By default we assume we are buying an asset
+                Quantity = 1,
+                Notes = "Direct purchase from WebShop"
+            };
+
+            var response = await Http.PostAsJsonAsync("/api/Orders", order);
+
+            if (response.IsSuccessStatusCode)
+            {
+                _purchaseSuccess = "Order placed successfully! Credits have been deducted.";
+                _product.IsAvailable = false; // Mark unavailable so user can't click twice
+                
+                // Optionally trigger a re-check of user's credits if we have a global state
+            }
+            else
+            {
+                // Try reading specific error string if available
+                var errorText = await response.Content.ReadAsStringAsync();
+                _purchaseError = $"Failed to purchase: {errorText}";
+            }
+        }
+        catch (Exception ex)
+        {
+            _purchaseError = $"Network or server error: {ex.Message}";
+        }
+        finally
+        {
+            _isPurchasing = false;
+            StateHasChanged();
+        }
+    }
+}
