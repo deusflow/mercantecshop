@@ -1,3 +1,4 @@
+using System.Xml;
 using WebShopMercantec.Configuration;
 using WebShopMercantec.Exceptions;
 using WebShopMercantec.Mapping;
@@ -14,17 +15,20 @@ public class AuthService : IAuthService
     private readonly ITokenService _tokenService;
     private readonly JwtSettings _jwtSettings;
     private readonly ILogger<AuthService> _logger;
+    private readonly ILdapService _ldapService;
 
     public AuthService(
         IUnitOfWork unitOfWork,
         ITokenService tokenService,
         JwtSettings jwtSettings,
-        ILogger<AuthService> logger)
+        ILogger<AuthService> logger,
+        ILdapService ldapService)
     {
         _unitOfWork = unitOfWork;
         _tokenService = tokenService;
         _jwtSettings = jwtSettings;
         _logger = logger;
+        _ldapService = ldapService;
     }
 
     // ─ Login 
@@ -35,40 +39,73 @@ public class AuthService : IAuthService
 
         var user = await _unitOfWork.Users.GetByEmailOrUsernameAsync(dto.Username);
 
-        if (user == null || user.DeletedAt != null)
+        bool useAdLogin =
+            user == null ||
+            user.Password == "ADLogin";
+
+        if (useAdLogin)
+        {
+            bool validAdUser =
+                await _ldapService.ValidateAsync(dto.Username, dto.Password);
+
+            if (!validAdUser)
+                throw new UnauthorizedException("Invalid username or password");
+
+            if (user == null)
+            {
+                user = new User
+                {
+                Username = dto.Username,
+                Password = "ADLogin",
+                Activated = true,
+                CreatedAt = DateTime.UtcNow
+                };
+
+                await _unitOfWork.Users.AddAsync(user);
+                await _unitOfWork.SaveChangesAsync();
+            }
+        }
+        else if (!VerifyPassword(dto.Password, user.Password))
             throw new UnauthorizedException("Invalid username or password");
 
         if (!user.Activated)
             throw new UnauthorizedException("Account is not activated");
 
-        if (!VerifyPassword(dto.Password, user.Password))
-            throw new UnauthorizedException("Invalid username or password");
-
-        // best effort update of last login, don't block login if it fails
         try
         {
             var trackedUser = await _unitOfWork.Users.GetByIdAsync(user.Id);
+
             if (trackedUser != null)
             {
                 trackedUser.LastLogin = DateTime.UtcNow;
+
                 _unitOfWork.Users.Update(trackedUser);
+
                 await _unitOfWork.SaveChangesAsync();
             }
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to update LastLogin for user {UserId}", user.Id);
+            _logger.LogWarning(ex,
+                "Failed to update LastLogin for user {UserId}",
+                user.Id);
+
             _unitOfWork.Context.ChangeTracker.Clear();
         }
 
-        var (accessToken, refreshToken, expiresAt) = await CreateTokenPairAsync(user);
+        var (accessToken, refreshToken, expiresAt) =
+            await CreateTokenPairAsync(user);
+
         await _unitOfWork.SaveChangesAsync();
 
         _logger.LogInformation("User {UserId} logged in", user.Id);
 
-        return BuildAuthResponse(user, accessToken, refreshToken, expiresAt);
+        return BuildAuthResponse(
+            user,
+            accessToken,
+            refreshToken,
+            expiresAt);
     }
-
     // ─ Register 
 
     public async Task<AuthResponseDto> RegisterAsync(RegisterDto dto)

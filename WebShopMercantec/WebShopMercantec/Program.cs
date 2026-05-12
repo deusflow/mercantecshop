@@ -1,17 +1,18 @@
-using Microsoft.EntityFrameworkCore;
-using WebShopMercantec.Models;
-using WebShopMercantec.Services;
-using WebShopMercantec.Repositories;
-using WebShopMercantec.Repositories.Specific;
-using WebShopMercantec.Middleware;
-using WebShopMercantec.Configuration;
-using Serilog;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Serilog;
+using Service;
 using System.Text;
+using WebShopMercantec.Configuration;
+using WebShopMercantec.Middleware;
+using WebShopMercantec.Models;
+using WebShopMercantec.Repositories;
+using WebShopMercantec.Repositories.Specific;
+using WebShopMercantec.Services;
 
 namespace WebShopMercantec;
 
@@ -108,6 +109,7 @@ public class Program
             builder.Services.AddScoped<ILocationService, LocationService>();
             builder.Services.AddScoped<IStatusLabelService, StatusLabelService>();
             builder.Services.AddScoped<IAuthService, AuthService>();
+            builder.Services.AddScoped<ILdapService, LdapService>();
             builder.Services.AddScoped<ITokenService, TokenService>();
             builder.Services.AddScoped<IUserService, UserService>();
             builder.Services.AddScoped<ICreditService, CreditService>();
