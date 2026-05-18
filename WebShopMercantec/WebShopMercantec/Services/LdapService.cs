@@ -4,6 +4,13 @@ namespace Service;
 
 public class LdapService : ILdapService
 {
+    private readonly IConfiguration _configuration;
+
+    public LdapService(IConfiguration configuration)
+    {
+        _configuration = configuration;
+    }
+
     public async Task<List<Dictionary<string, string>>> SearchAsync(string searchBase, string[] attributes, string searchFilter)
     {
         string loginInfo = Environment.GetEnvironmentVariable("AD_CONNECTION_TEST_LOGIN") ?? "";
@@ -64,10 +71,18 @@ public class LdapService : ILdapService
         };
         try
         {
-            string connectionString = Environment.GetEnvironmentVariable("AD_CONNECTION_STRING") ?? "";
-            if (string.IsNullOrEmpty(connectionString))
+            string? connectionString = _configuration["environmentVariables:AD_CONNECTION_STRING"];
+
+            if (string.IsNullOrWhiteSpace(connectionString))
             {
-                throw new Exception("LDAP connection string is missing");
+                connectionString = Environment.GetEnvironmentVariable("AD_CONNECTION_STRING");
+            }
+
+            if (string.IsNullOrWhiteSpace(connectionString))
+            {
+                throw new Exception(
+                    "LDAP connection string is missing in both appsettings and environment variables"
+                );
             }
 
             string[] connectionParams = connectionString.Split("__");
