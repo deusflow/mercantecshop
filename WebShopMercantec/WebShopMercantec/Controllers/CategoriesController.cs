@@ -21,7 +21,7 @@ public class CategoriesController : ControllerBase
         _validator = validator;
     }
 
-    // Получить все категории
+    // Get all categories
     
     [HttpGet]
     public async Task<ActionResult<IEnumerable<CategoryDto>>> GetAll()
@@ -30,7 +30,7 @@ public class CategoriesController : ControllerBase
         return Ok(categories);
     }
 
-    // Получить категорию по ID
+    // Get category by ID
     
     [HttpGet("{id}")]
     public async Task<ActionResult<CategoryDto>> GetById(int id)
@@ -39,7 +39,7 @@ public class CategoriesController : ControllerBase
         return Ok(category);
     }
 
-    // Получить категории по типу
+    // Get categories by type
     
     [HttpGet("type/{categoryType}")]
     public async Task<ActionResult<IEnumerable<CategoryDto>>> GetByType(string categoryType)
@@ -48,13 +48,13 @@ public class CategoriesController : ControllerBase
         return Ok(categories);
     }
 
-    // Создать новую категорию
+    // Create a new category
     
     [HttpPost]
     [Authorize(Roles = "Admin")]
     public async Task<ActionResult<CategoryDto>> Create([FromBody] CategoryDto categoryDto)
     {
-        // Валидация входных данных
+        // Input validation
         var validationResult = await _validator.ValidateAsync(categoryDto);
         if (!validationResult.IsValid)
         {
@@ -65,13 +65,13 @@ public class CategoriesController : ControllerBase
         return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
     }
 
-    // Обновить категорию
+    // Update a category
     
     [HttpPut("{id}")]
     [Authorize(Roles = "Admin")]
     public async Task<ActionResult<CategoryDto>> Update(int id, [FromBody] CategoryDto categoryDto)
     {
-        // Валидация входных данных
+        // Input validation
         var validationResult = await _validator.ValidateAsync(categoryDto);
         if (!validationResult.IsValid)
         {
@@ -82,7 +82,7 @@ public class CategoriesController : ControllerBase
         return Ok(updated);
     }
 
-    // Удалить категорию (soft delete)
+    // Delete a category (soft delete)
     
     [HttpDelete("{id}")]
     [Authorize(Roles = "Admin")]
@@ -92,7 +92,7 @@ public class CategoriesController : ControllerBase
         return NoContent();
     }
 
-    // Категории для витрины каталога (только asset, с учетом ShowInCatalog)
+    // Categories for the catalog storefront (assets only, honoring ShowInCatalog)
     
     [HttpGet("catalog")]
     public async Task<ActionResult<IEnumerable<CategoryDto>>> GetCatalogCategories()
@@ -101,7 +101,7 @@ public class CategoriesController : ControllerBase
         return Ok(categories);
     }
 
-    // Категории для админ-настроек витрины (все asset категории)
+    // Categories for admin storefront settings (all asset categories)
     
     [HttpGet("catalog-admin")]
     [Authorize(Roles = "Admin,SuperAdmin")]
@@ -111,7 +111,7 @@ public class CategoriesController : ControllerBase
         return Ok(categories);
     }
 
-    // Включить/выключить отображение категории на главной витрине
+    // Enable/disable category visibility on the storefront
     
     [HttpPut("{id}/catalog-visibility")]
     [Authorize(Roles = "Admin,SuperAdmin")]

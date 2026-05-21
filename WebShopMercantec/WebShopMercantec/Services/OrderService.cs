@@ -125,7 +125,7 @@ public class OrderService : IOrderService
         // check 5 minutes window
         if (order.CreatedAt.HasValue && order.CreatedAt.Value.AddMinutes(5) < DateTime.UtcNow)
         {
-            throw new BadRequestException("Отмена заказа возможна только в течение 5 минут после оформления. Пожалуйста, обратитесь в поддержку.");
+            throw new BadRequestException("Order cancellation is only possible within 5 minutes after placement. Please contact support.");
         }
 
         // refund user credits on cancellation

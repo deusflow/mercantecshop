@@ -29,7 +29,6 @@ public static class ValidationExtensions
             });
         }
 
-        return null; // Валидация прошла успешно
+        return null; // Validation passed
     }
 }
-

@@ -49,7 +49,7 @@ public class OrderRepository : Repository<CheckoutRequest>, IOrderRepository
                 o.DeletedAt == null &&
                 o.FulfilledAt == null &&
                 o.CanceledAt == null)
-            .OrderBy(o => o.CreatedAt) // Старые заказы первыми (очередь)
+            .OrderBy(o => o.CreatedAt) // Oldest orders first (queue)
             .ToListAsync();
     }
 
@@ -83,7 +83,7 @@ public class OrderRepository : Repository<CheckoutRequest>, IOrderRepository
         int pageNumber, 
         int pageSize)
     {
-        // Строим запрос в зависимости от статуса
+        // Build query based on status
         IQueryable<CheckoutRequest> query = status.ToLower() switch
         {
             "pending" => _dbSet.AsNoTracking().Where(o =>
@@ -124,7 +124,7 @@ public class OrderRepository : Repository<CheckoutRequest>, IOrderRepository
     {
         var query = _dbSet.AsNoTracking().Where(o => o.DeletedAt == null);
         
-        // Фильтр по статусу
+        // Status filter
         if (!string.IsNullOrWhiteSpace(status))
         {
             query = status.ToLower() switch
@@ -136,19 +136,19 @@ public class OrderRepository : Repository<CheckoutRequest>, IOrderRepository
             };
         }
         
-        // Фильтр по пользователю
+        // User filter
         if (userId.HasValue)
         {
             query = query.Where(o => o.UserId == userId.Value);
         }
         
-        // Фильтр по дате (от)
+        // Date filter (from)
         if (fromDate.HasValue)
         {
             query = query.Where(o => o.CreatedAt >= fromDate.Value);
         }
         
-        // Фильтр по дате (до)
+        // Date filter (to)
         if (toDate.HasValue)
         {
             query = query.Where(o => o.CreatedAt <= toDate.Value);

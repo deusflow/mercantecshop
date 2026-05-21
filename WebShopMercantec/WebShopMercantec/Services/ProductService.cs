@@ -4,8 +4,8 @@ using WebShopMercantec.Mapping;
 
 namespace WebShopMercantec.Services;
 
-// Сервис для работы с продуктами и аксессуарами
-// Использует Repository Pattern с загрузкой связанных данных
+// Product and accessory service
+// Uses the repository pattern with related data loading
 
 public class ProductService : IProductService
 {
@@ -18,7 +18,7 @@ public class ProductService : IProductService
         _logger = logger;
     }
 
-    // === ОСНОВНЫЕ МЕТОДЫ ===
+    // === CORE METHODS ===
 
     public async Task<IEnumerable<ProductDto>> GetAvailableProductsAsync()
     {
@@ -46,7 +46,7 @@ public class ProductService : IProductService
         return ProductMapping.MapFromDetails(details);
     }
 
-    // === ПАГИНАЦИЯ И ФИЛЬТРАЦИЯ ===
+    // === PAGINATION AND FILTERING ===
 
     public async Task<(IEnumerable<ProductDto> Products, int TotalCount)> GetProductsPagedAsync(
         int pageNumber, int pageSize, int? categoryId = null,
@@ -189,7 +189,7 @@ public class ProductService : IProductService
         return await GetProductByIdAsync((int)asset.Id) ?? throw new InvalidOperationException("Failed to load created device");
     }
 
-    // === АКСЕССУАРЫ ===
+    // === ACCESSORIES ===
 
     public async Task<IEnumerable<AccessoryDto>> GetAvailableAccessoriesAsync()
     {
@@ -232,7 +232,7 @@ public class ProductService : IProductService
         return (dtos, totalCount);
     }
 
-    // === ПРОВЕРКИ ДОСТУПНОСТИ ===
+    // === AVAILABILITY CHECKS ===
 
     public async Task<bool> IsProductAvailableAsync(int productId)
     {

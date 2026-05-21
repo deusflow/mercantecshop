@@ -77,13 +77,13 @@
 
     protected override async Task OnInitializedAsync()
     {
-        // Проверяем, залогинен ли пользователь
+        // Check if user is logged in
         var authState = await AuthState.GetAuthenticationStateAsync();
         if (authState.User.Identity?.IsAuthenticated == true)
         {
             try
             {
-                // Идем на сервер и узнаем баланс
+                // Fetch balance from the server
                 var user = await Http.GetFromJsonAsync<WebShopMercantec.Shared.DTOs.UserDto>("/api/Users/me");
                 _credits = user?.AvailableCredits ?? 0;
             }

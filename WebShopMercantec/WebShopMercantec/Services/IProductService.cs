@@ -2,15 +2,15 @@ using WebShopMercantec.Shared.DTOs;
 
 namespace WebShopMercantec.Services;
 
-// Интерфейс сервиса для работы с продуктами (Assets)
+// Product (asset) service interface
 
 public interface IProductService
 {
-    // === ОСНОВНЫЕ МЕТОДЫ ===
+    // === CORE METHODS ===
     Task<IEnumerable<ProductDto>> GetAvailableProductsAsync();
     Task<ProductDto?> GetProductByIdAsync(int id);
     
-    // === ПАГИНАЦИЯ И ФИЛЬТРАЦИЯ ===
+    // === PAGINATION AND FILTERING ===
     Task<(IEnumerable<ProductDto> Products, int TotalCount)> GetProductsPagedAsync(
         int pageNumber, int pageSize, int? categoryId = null,
         int? manufacturerId = null, string? searchTerm = null,
@@ -28,13 +28,13 @@ public interface IProductService
     Task<ProductDto> SetProductPriceAsync(int productId, decimal price);
     Task<ProductDto> CreateProductAsync(CreateDeviceDto dto);
 
-    // === АКСЕССУАРЫ ===
+    // === ACCESSORIES ===
     Task<IEnumerable<AccessoryDto>> GetAvailableAccessoriesAsync();
     Task<AccessoryDto?> GetAccessoryByIdAsync(int id);
     Task<(IEnumerable<AccessoryDto> Accessories, int TotalCount)> GetAccessoriesPagedAsync(
         int pageNumber, int pageSize, int? categoryId = null, string? searchTerm = null);
     
-    // === ПРОВЕРКИ ===
+    // === VALIDATIONS ===
     Task<bool> IsProductAvailableAsync(int productId);
     Task<bool> IsAccessoryAvailableAsync(int accessoryId, int requestedQuantity = 1);
 }

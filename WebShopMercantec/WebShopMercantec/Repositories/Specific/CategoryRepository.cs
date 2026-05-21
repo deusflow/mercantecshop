@@ -41,7 +41,7 @@ public class CategoryRepository : Repository<Category>, ICategoryRepository
     
     public async Task<int> GetItemsCountAsync(uint categoryId)
     {
-        // Подсчитываем Assets (продукты) в этой категории через Model
+        // Count assets (products) in this category via model
         var assetsCount = await (
             from asset in _context.Assets
             join model in _context.Models on asset.ModelId equals (int?)model.Id
@@ -51,7 +51,7 @@ public class CategoryRepository : Repository<Category>, ICategoryRepository
             select asset
         ).CountAsync();
 
-        // Подсчитываем Accessories в этой категории
+        // Count accessories in this category
         var accessoriesCount = await _context.Accessories
             .Where(a => a.CategoryId == categoryId && a.DeletedAt == null)
             .CountAsync();
@@ -62,7 +62,7 @@ public class CategoryRepository : Repository<Category>, ICategoryRepository
     
     public async Task<Dictionary<uint, int>> GetAllItemsCountsBatchAsync()
     {
-        // 1. Подсчитываем Assets по категориям (через Model -> CategoryId)
+        // 1. Count assets by category (model -> CategoryId)
         var assetCounts = await (
             from model in _context.Models.AsNoTracking()
             where model.DeletedAt == null && model.CategoryId.HasValue
@@ -72,7 +72,7 @@ public class CategoryRepository : Repository<Category>, ICategoryRepository
             select new { CategoryId = g.Key, Count = g.Count() }
         ).ToDictionaryAsync(x => x.CategoryId, x => x.Count);
 
-        // 2. Подсчитываем Accessories по категориям
+        // 2. Count accessories by category
         var accessoryCounts = await _context.Accessories
             .AsNoTracking()
             .Where(a => a.DeletedAt == null && a.CategoryId.HasValue)
@@ -80,7 +80,7 @@ public class CategoryRepository : Repository<Category>, ICategoryRepository
             .Select(g => new { CategoryId = g.Key, Count = g.Count() })
             .ToDictionaryAsync(x => x.CategoryId, x => x.Count);
 
-        // 3. Мержим результаты
+        // 3. Merge results
         var result = new Dictionary<uint, int>(assetCounts);
         foreach (var (categoryId, count) in accessoryCounts)
         {
@@ -93,4 +93,3 @@ public class CategoryRepository : Repository<Category>, ICategoryRepository
         return result;
     }
 }
-

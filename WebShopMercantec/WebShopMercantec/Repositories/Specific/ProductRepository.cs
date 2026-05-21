@@ -85,7 +85,7 @@ public class ProductRepository : Repository<Asset>, IProductRepository
             .AsNoTracking()
             .Where(a =>
                 a.AssignedTo == userId &&
-                a.AssignedType == "App\\Models\\User" && // Проверяем тип назначения
+                a.AssignedType == "App\\Models\\User" && // Ensure assignment type
                 a.DeletedAt == null)
             .ToListAsync();
     }
@@ -117,17 +117,17 @@ public class ProductRepository : Repository<Asset>, IProductRepository
         decimal? maxPrice = null,
         bool? availableOnly = true)
     {
-        // Базовый запрос
+        // Base query
         var query = _dbSet.AsNoTracking().Where(a => a.DeletedAt == null);
 
-        // Фильтр: только доступные для заказа
+        // Filter: available for checkout only
         if (availableOnly == true)
         {
             var availabilityRules = await GetAvailabilityRulesAsync();
             query = ApplyAvailableAssetFilter(query, availabilityRules);
         }
 
-        // Фильтр по категории (через Model)
+        // Filter by category (via model)
         if (categoryId.HasValue)
         {
             var modelIds = await GetModelIdsByCategoryAsync(categoryId.Value);
@@ -139,7 +139,7 @@ public class ProductRepository : Repository<Asset>, IProductRepository
                 modelIds.Contains(a.ModelId));
         }
 
-        // Фильтр по производителю (через Model)
+        // Filter by manufacturer (via model)
         if (manufacturerId.HasValue)
         {
             var modelIds = await GetModelIdsByManufacturerAsync(manufacturerId.Value);
@@ -151,13 +151,13 @@ public class ProductRepository : Repository<Asset>, IProductRepository
                 modelIds.Contains(a.ModelId));
         }
 
-        // Фильтр по статусу
+        // Filter by status
         if (statusId.HasValue)
         {
             query = query.Where(a => a.StatusId == statusId);
         }
 
-        // Фильтр по поиску
+        // Filter by search term
         if (!string.IsNullOrWhiteSpace(searchTerm))
         {
             var term = $"%{searchTerm.Trim()}%";
@@ -168,7 +168,7 @@ public class ProductRepository : Repository<Asset>, IProductRepository
             );
         }
 
-        // Фильтр по цене
+        // Filter by price
         if (minPrice.HasValue)
         {
             query = query.Where(a => a.PurchaseCost >= minPrice.Value);
@@ -179,10 +179,10 @@ public class ProductRepository : Repository<Asset>, IProductRepository
             query = query.Where(a => a.PurchaseCost <= maxPrice.Value);
         }
 
-        // Считаем общее количество
+        // Count total items
         var totalCount = await query.CountAsync();
 
-        // Получаем страницу с сортировкой
+        // Fetch the page with sorting
         var products = await query
             .OrderBy(a => a.Name)
             .ThenBy(a => a.Id)
@@ -246,7 +246,7 @@ public class ProductRepository : Repository<Asset>, IProductRepository
             .ToListAsync();
     }
 
-    // === МЕТОДЫ С ЗАГРУЗКОЙ СВЯЗЕЙ ===
+    // === METHODS WITH RELATED DATA ===
 
     
     private async Task<List<AssetWithDetails>> ComposeAssetsWithDetailsAsync(List<Asset> assets)

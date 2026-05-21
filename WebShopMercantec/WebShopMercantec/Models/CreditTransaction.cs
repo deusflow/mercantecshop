@@ -4,7 +4,7 @@ public class CreditTransaction
 {
     public int Id { get; set; }
     public uint UserId { get; set; }
-    public decimal Amount { get; set; }         // Положительное = зачисление, отрицательное = списание
+    public decimal Amount { get; set; }         // Positive = credit, negative = debit
     public string Type { get; set; } = string.Empty;  // "credit" | "debit" | "refund"
     public string? Reason { get; set; }
     public decimal BalanceBefore { get; set; }
@@ -12,4 +12,3 @@ public class CreditTransaction
     public int? RelatedOrderId { get; set; }
     public DateTime CreatedAt { get; set; }
 }
-

@@ -2,40 +2,40 @@ using WebShopMercantec.Shared.DTOs;
 
 namespace WebShopMercantec.Services;
 
-// Интерфейс сервиса для работы с категориями
-// Определяет бизнес-логику для управления категориями
+// Category service interface
+// Defines business logic for category management
 
 public interface ICategoryService
 {
-    // Получить все активные категории
+    // Get all active categories
     
     Task<IEnumerable<CategoryDto>> GetAllCategoriesAsync();
 
-    // Получить категории для каталога (asset) с доступным количеством.
+    // Get categories for catalog (asset) with available quantity
     
     Task<IEnumerable<CategoryDto>> GetCatalogCategoriesAsync(bool includeHidden = false);
 
-    // Изменить видимость категории в каталоге.
+    // Toggle category visibility in the catalog
     
     Task SetCategoryVisibilityAsync(int categoryId, bool visible);
 
-    // Получить категорию по ID
+    // Get category by ID
     
     Task<CategoryDto?> GetCategoryByIdAsync(int id);
     
-    // Получить категории по типу (asset, accessory, consumable, component)
+    // Get categories by type (asset, accessory, consumable, component)
     
     Task<IEnumerable<CategoryDto>> GetCategoriesByTypeAsync(string categoryType);
     
-    // Создать новую категорию
+    // Create a new category
     
     Task<CategoryDto> CreateCategoryAsync(CategoryDto categoryDto);
     
-    // Обновить существующую категорию
+    // Update an existing category
     
     Task<CategoryDto> UpdateCategoryAsync(int id, CategoryDto categoryDto);
     
-    // Удалить категорию (soft delete)
+    // Delete a category (soft delete)
     
     Task DeleteCategoryAsync(int id);
 }

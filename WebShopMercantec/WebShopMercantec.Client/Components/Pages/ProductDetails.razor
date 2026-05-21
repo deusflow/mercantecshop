@@ -7,10 +7,10 @@
 
 <PageTitle>Product Details - TechShop</PageTitle>
 
-<!-- ДЕТАЛИ ПРОДУКТА -->
+<!-- PRODUCT DETAILS -->
 <div class="product-details-container fade-in">
     
-    <!-- Кнопка "Назад" -->
+    <!-- "Back" Button -->
     <div class="back-link-container">
         <NavLink href="/" class="back-link">‹ Back to Catalog</NavLink>
     </div>
@@ -32,17 +32,17 @@
 
     <div class="product-details-layout">
         
-        <!-- ЛЕВАЯ ЧАСТЬ: ИЗОБРАЖЕНИЕ ПРОДУКТА -->
+        <!-- LEFT SIDE: PRODUCT IMAGE -->
         <div class="product-image-section">
             <div class="product-main-image">
                 <div class="placeholder-image-large"></div>
             </div>
         </div>
 
-        <!-- ПРАВАЯ ЧАСТЬ: ИНФОРМАЦИЯ О ПРОДУКТЕ -->
+        <!-- RIGHT SIDE: PRODUCT INFO -->
         <div class="product-info-section">
             
-            <!-- Название и категория -->
+            <!-- Name and Category -->
             <div class="product-category">
                 <span class="badge badge-primary">@_product.CategoryName</span>
             </div>
@@ -53,7 +53,7 @@
                 @(!string.IsNullOrWhiteSpace(_product.Notes) ? _product.Notes : "No description provided.")
             </p>
 
-            <!-- Цена и действия -->
+            <!-- Price and Actions -->
             <div class="product-purchase-section card">
                 <div class="price-section">
                     <span class="price-label">Price</span>
@@ -130,7 +130,7 @@
                 </p>
             </div>
 
-            <!-- Характеристики -->
+            <!-- Specifications -->
             <div class="product-specs">
                 <div class="spec-item">
                     <span class="spec-label">Manufacturer</span>
@@ -159,7 +159,7 @@
         </div>
     </div>
 
-    <!-- ДОПОЛНИТЕЛЬНАЯ ИНФОРМАЦИЯ -->
+    <!-- ADDITIONAL INFORMATION -->
     <div class="additional-info card mt-xl">
         <h2>Good to Know</h2>
         
@@ -245,7 +245,7 @@
         _purchaseError = null;
         _purchaseSuccess = null;
         _authError = null;
-        _showConfirm = false; // Прячем блок подтверждения во время обработки
+        _showConfirm = false; // Hide confirmation block during processing
 
         try
         {

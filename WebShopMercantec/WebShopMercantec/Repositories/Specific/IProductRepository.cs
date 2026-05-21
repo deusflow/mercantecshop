@@ -53,7 +53,7 @@ public interface IProductRepository : IRepository<Asset>
     
     Task<IEnumerable<Asset>> GetProductsRequiringMaintenanceAsync();
     
-    // === МЕТОДЫ С ЗАГРУЗКОЙ СВЯЗЕЙ (AssetWithDetails) ===
+    // === METHODS WITH RELATED DATA (AssetWithDetails) ===
     
     
     Task<AssetWithDetails?> GetProductWithDetailsAsync(uint id);

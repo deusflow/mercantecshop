@@ -34,7 +34,7 @@ public class UnitOfWork : IUnitOfWork
         StatusLabels = statusLabels;
     }
 
-    // === РЕПОЗИТОРИИ (через DI) ===
+    // === REPOSITORIES (via DI) ===
     
     public IUserRepository Users { get; }
     public IProductRepository Products { get; }
@@ -49,7 +49,7 @@ public class UnitOfWork : IUnitOfWork
     
     public SnipeItContext Context => _context;
 
-    // === МЕТОДЫ УПРАВЛЕНИЯ ===
+    // === CONTROL METHODS ===
 
     
     public async Task<int> SaveChangesAsync()

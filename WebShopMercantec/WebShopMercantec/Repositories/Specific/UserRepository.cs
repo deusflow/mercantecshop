@@ -129,12 +129,12 @@ public class UserRepository : Repository<User>, IUserRepository
         bool? activated = null, 
         uint? companyId = null)
     {
-        // Начинаем с базового запроса
+        // Start from the base query
         var query = _dbSet.AsNoTracking().Where(u => u.DeletedAt == null);
         
-        // Применяем фильтры, если они заданы
+        // Apply filters if provided
         
-        // Фильтр по поиску
+        // Search filter
         if (!string.IsNullOrWhiteSpace(searchTerm))
         {
             var term = $"%{searchTerm.Trim()}%";
@@ -146,24 +146,24 @@ public class UserRepository : Repository<User>, IUserRepository
             );
         }
         
-        // Фильтр по статусу активации
+        // Activation status filter
         if (activated.HasValue)
         {
             query = query.Where(u => u.Activated == activated.Value);
         }
         
-        // Фильтр по компании
+        // Company filter
         if (companyId.HasValue)
         {
             query = query.Where(u => u.CompanyId == companyId.Value);
         }
         
-        // Считаем общее количество (после применения фильтров)
+        // Count total items (after filters)
         var totalCount = await query.CountAsync();
         
-        // Получаем страницу с сортировкой по ID
+        // Fetch the page sorted by ID
         var users = await query
-            .OrderBy(u => u.Id) // Сортировка для стабильной пагинации
+            .OrderBy(u => u.Id) // Stable sort for pagination
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();

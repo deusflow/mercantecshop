@@ -18,6 +18,10 @@
     --color-warning: #ff9f0a;
     --color-error: #ff453a;
     
+    --primary-color: var(--color-accent);
+    --primary-color-rgb: 0, 122, 255;
+    --bg-color: var(--color-surface-elevated);
+    
     /* Размеры и отступы (увеличим для большего "воздуха") */
     --spacing-xs: 4px;
     --spacing-sm: 8px;

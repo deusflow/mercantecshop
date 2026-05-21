@@ -92,7 +92,7 @@
                         <button class="page-link" @onclick="() => LoadOrders(_currentPage - 1)">Back</button>
                     </li>
                     <li class="page-item disabled">
-                        <span class="page-link">Стр. @_currentPage из @_totalPages</span>
+                        <span class="page-link">Page @_currentPage of @_totalPages</span>
                     </li>
                     <li class="page-item @(_currentPage == _totalPages ? "disabled" : "")">
                         <button class="page-link" @onclick="() => LoadOrders(_currentPage + 1)">Next</button>
@@ -135,7 +135,7 @@
         }
         catch (Exception ex)
         {
-            _error = "Ошибка загрузки заказов: " + ex.Message;
+            _error = "Error loading orders: " + ex.Message;
         }
         finally
         {
@@ -154,12 +154,12 @@
             }
             else
             {
-                _error = "Не удалось одобрить заказ";
+                _error = "Failed to approve order";
             }
         }
         catch (Exception ex)
         {
-            _error = "Ошибка при одобрении: " + ex.Message;
+            _error = "Error during approval: " + ex.Message;
         }
     }
 
@@ -174,12 +174,12 @@
             }
             else
             {
-                _error = "Не удалось отклонить заказ";
+                _error = "Failed to decline order";
             }
         }
         catch (Exception ex)
         {
-            _error = "Ошибка при отклонении: " + ex.Message;
+            _error = "Error during decline: " + ex.Message;
         }
     }
 

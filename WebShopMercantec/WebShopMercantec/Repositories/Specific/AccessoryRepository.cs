@@ -79,28 +79,28 @@ public class AccessoryRepository : Repository<Accessory>, IAccessoryRepository
         string? searchTerm = null,
         bool? availableOnly = true)
     {
-        // Базовый запрос
+        // Base query
         var query = _dbSet.AsNoTracking().Where(a => a.DeletedAt == null);
 
-        // Фильтр: только доступные
+        // Filter: available only
         if (availableOnly == true)
         {
             query = ApplyAvailableAccessoryFilter(query);
         }
 
-        // Фильтр по категории
+        // Filter by category
         if (categoryId.HasValue)
         {
             query = query.Where(a => a.CategoryId == categoryId);
         }
 
-        // Фильтр по производителю
+        // Filter by manufacturer
         if (manufacturerId.HasValue)
         {
             query = query.Where(a => a.ManufacturerId == manufacturerId);
         }
 
-        // Фильтр по поиску
+        // Filter by search term
         if (!string.IsNullOrWhiteSpace(searchTerm))
         {
             var term = $"%{searchTerm.Trim()}%";
@@ -111,10 +111,10 @@ public class AccessoryRepository : Repository<Accessory>, IAccessoryRepository
             );
         }
 
-        // Считаем общее количество
+        // Count total items
         var totalCount = await query.CountAsync();
 
-        // Получаем страницу
+        // Fetch the page
         var accessories = await query
             .OrderBy(a => a.Name)
             .ThenBy(a => a.Id)
@@ -155,12 +155,12 @@ public class AccessoryRepository : Repository<Accessory>, IAccessoryRepository
             .AsNoTracking()
             .Where(a =>
                 a.DeletedAt == null &&
-                a.Qty > 0 && // Не полностью закончились
+                a.Qty > 0 && // Not fully out of stock
                 (
                     (a.MinAmt.HasValue && a.Qty <= a.MinAmt.Value) ||
                     (!a.MinAmt.HasValue && a.Qty < DefaultLowStockThreshold) // Default threshold
                 ))
-            .OrderBy(a => a.Qty) // Сортируем по количеству (меньше первыми)
+            .OrderBy(a => a.Qty) // Sort by quantity (lowest first)
             .ToListAsync();
     }
 
@@ -182,7 +182,7 @@ public class AccessoryRepository : Repository<Accessory>, IAccessoryRepository
         if (accessory == null || accessory.DeletedAt != null)
             return false;
 
-        // Проверяем, что не уходим в минус
+        // Ensure we do not go negative
         var newQuantity = accessory.Qty + quantityChange;
         if (newQuantity < 0)
             return false;
@@ -190,11 +190,11 @@ public class AccessoryRepository : Repository<Accessory>, IAccessoryRepository
         accessory.Qty = newQuantity;
         accessory.UpdatedAt = DateTime.UtcNow;
 
-        // Update вызовется автоматически через EF Core change tracking
+        // Update will be applied automatically via EF Core change tracking
         return true;
     }
 
-    // === МЕТОДЫ ДЛЯ ПОЛУЧЕНИЯ ENRICHED ДАННЫХ (СО СВЯЗЯМИ) ===
+    // === METHODS FOR ENRICHED DATA (WITH RELATIONS) ===
 
     
     public async Task<IEnumerable<EnrichedAccessory>> GetAvailableAccessoriesEnrichedAsync()
@@ -203,16 +203,16 @@ public class AccessoryRepository : Repository<Accessory>, IAccessoryRepository
                     where accessory.DeletedAt == null &&
                           accessory.Requestable &&
                           accessory.Qty > 0
-                    // LEFT JOIN с Category
+                    // LEFT JOIN with Category
                     join category in _context.Categories on accessory.CategoryId equals (int?)category.Id into categoryGroup
                     from category in categoryGroup.DefaultIfEmpty()
-                    // LEFT JOIN с Manufacturer
+                    // LEFT JOIN with Manufacturer
                     join manufacturer in _context.Manufacturers on accessory.ManufacturerId equals (int?)manufacturer.Id into mfgGroup
                     from manufacturer in mfgGroup.DefaultIfEmpty()
-                    // LEFT JOIN с Supplier
+                    // LEFT JOIN with Supplier
                     join supplier in _context.Suppliers on accessory.SupplierId equals (int?)supplier.Id into supplierGroup
                     from supplier in supplierGroup.DefaultIfEmpty()
-                    // LEFT JOIN с Location
+                    // LEFT JOIN with Location
                     join location in _context.Locations on accessory.LocationId equals (int?)location.Id into locationGroup
                     from location in locationGroup.DefaultIfEmpty()
                     select new EnrichedAccessory
@@ -280,7 +280,7 @@ public class AccessoryRepository : Repository<Accessory>, IAccessoryRepository
                         location
                     };
 
-        // Фильтры
+        // Filters
         if (availableOnly == true)
         {
             query = query.Where(x => x.accessory.Requestable && x.accessory.Qty > 0);
@@ -300,10 +300,10 @@ public class AccessoryRepository : Repository<Accessory>, IAccessoryRepository
                 (x.accessory.ModelNumber != null && EF.Functions.Like(x.accessory.ModelNumber, search)));
         }
 
-        // Подсчет общего количества
+        // Count total items
         var totalCount = await query.CountAsync();
 
-        // Пагинация
+        // Pagination
         var results = await query
             .OrderBy(x => x.accessory.Name)
             .Skip((pageNumber - 1) * pageSize)

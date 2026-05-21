@@ -6,8 +6,8 @@ using WebShopMercantec.Mapping;
 
 namespace WebShopMercantec.Services;
 
-// Сервис для работы с категориями
-// Использует Repository Pattern и обрабатывает бизнес-логику
+// Category service
+// Uses the repository pattern and handles business logic
 
 public class CategoryService : ICategoryService
 {
@@ -20,8 +20,8 @@ public class CategoryService : ICategoryService
         _logger = logger;
     }
 
-    // Получить все активные категории с количеством элементов
-    // Использует batch-запрос для подсчёта (2 SQL вместо N+1)
+    // Get all active categories with item counts
+    // Uses a batch query for counts (2 SQL calls instead of N+1)
     
     public async Task<IEnumerable<CategoryDto>> GetAllCategoriesAsync()
     {
@@ -77,7 +77,7 @@ public class CategoryService : ICategoryService
         await _unitOfWork.SaveChangesAsync();
     }
 
-    // Получить категорию по ID
+    // Get category by ID
     
     public async Task<CategoryDto?> GetCategoryByIdAsync(int id)
     {
@@ -96,7 +96,7 @@ public class CategoryService : ICategoryService
         return CategoryMapping.MapToDto(category, itemsCount);
     }
 
-    // Получить категории по типу
+    // Get categories by type
     
     public async Task<IEnumerable<CategoryDto>> GetCategoriesByTypeAsync(string categoryType)
     {
@@ -110,7 +110,7 @@ public class CategoryService : ICategoryService
         ).ToList();
     }
 
-    // Создать новую категорию
+    // Create a new category
     
     public async Task<CategoryDto> CreateCategoryAsync(CategoryDto categoryDto)
     {
@@ -136,7 +136,7 @@ public class CategoryService : ICategoryService
         return CategoryMapping.MapToDto(category, 0);
     }
 
-    // Обновить существующую категорию
+    // Update an existing category
     
     public async Task<CategoryDto> UpdateCategoryAsync(int id, CategoryDto categoryDto)
     {
@@ -165,7 +165,7 @@ public class CategoryService : ICategoryService
         return CategoryMapping.MapToDto(category, itemsCount);
     }
 
-    // Удалить категорию (soft delete)
+    // Delete a category (soft delete)
     
     public async Task DeleteCategoryAsync(int id)
     {

@@ -5,7 +5,7 @@
 
 <PageTitle>User Management - TechShop Admin</PageTitle>
 
-<!-- АДМИН ПАНЕЛЬ УПРАВЛЕНИЯ ПОЛЬЗОВАТЕЛЯМИ -->
+<!-- ADMIN USER MANAGEMENT PANEL -->
 <div class="admin-container fade-in">
     <style>
         .active-filter {
@@ -20,13 +20,13 @@
         }
     </style>
     
-    <!-- ЗАГОЛОВОК -->
+    <!-- HEADER -->
     <div class="page-header">
         <h1>User Management</h1>
         <p>Manage users, credit balances, and export data.</p>
     </div>
 
-    <!-- СТАТИСТИКА ПАНЕЛИ -->
+    <!-- DASHBOARD STATS -->
     <div class="admin-stats grid grid-4 mb-xl">
         <div class="card stat-card-admin @(_currentFilter == null ? "active-filter" : "")" @onclick='() => SetFilter(null)' style="cursor: pointer; transition: all 0.2s;">
             <div class="stat-content">
@@ -76,7 +76,7 @@
         </div>
     </div>
 
-    <!-- ТАБЛИЦА ПОЛЬЗОВАТЕЛЕЙ -->
+    <!-- USERS TABLE -->
     <div class="card">
         <div class="flex-between mb-lg">
             <h2>All Users</h2>
@@ -153,7 +153,7 @@
             }
         </div>
 
-        <!-- Пагинация -->
+        <!-- Pagination -->
         @if (_totalPages > 1)
         {
             <div class="pagination">
@@ -174,8 +174,8 @@
                 
                 <!-- Toggle Add / Deduct -->
                 <div class="toggle-switch mb-lg" style="display: flex; background: var(--bg-color); border-radius: 8px; padding: 4px;">
-                    <button class="btn flex-1 @(_isAddingMode ? "btn-primary" : "btn-text")" style="border-radius: 6px; py-1" @onclick="() => _isAddingMode = true">Add</button>
-                    <button class="btn flex-1 @(!_isAddingMode ? "btn-primary" : "btn-text")" style="border-radius: 6px; py-1" @onclick="() => _isAddingMode = false">Deduct</button>
+                    <button class="btn flex-1 py-1 @(_isAddingMode ? "btn-primary" : "btn-text")" style="border-radius: 6px;" @onclick="() => _isAddingMode = true">Add</button>
+                    <button class="btn flex-1 py-1 @(!_isAddingMode ? "btn-primary" : "btn-text")" style="border-radius: 6px;" @onclick="() => _isAddingMode = false">Deduct</button>
                 </div>
 
                 <div class="form-group mb-lg">

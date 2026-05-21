@@ -6,23 +6,23 @@ namespace WebShopMercantec.Repositories;
 
 public class Repository<T> : IRepository<T> where T : class
 {
-    // DbContext - это "окно" в базу данных от Entity Framework
+    // DbContext is the Entity Framework "window" to the database
     protected readonly SnipeItContext _context;
     
-    // DbSet - это "таблица" в базе данных для конкретной сущности
+    // DbSet is the database "table" for a specific entity
     protected readonly DbSet<T> _dbSet;
 
     
     public Repository(SnipeItContext context)
     {
         _context = context;
-        _dbSet = context.Set<T>(); // Получаем DbSet для типа T
+        _dbSet = context.Set<T>(); // Get the DbSet for type T
     }
 
     
     public virtual async Task<T?> GetByIdAsync(int id)
     {
-        // FindAsync - оптимизированный метод EF Core для поиска по первичному ключу
+        // FindAsync is an optimized EF Core lookup by primary key
         return await _dbSet.FindAsync(id);
     }
     
@@ -36,7 +36,7 @@ public class Repository<T> : IRepository<T> where T : class
     public virtual async Task<IEnumerable<T>> GetAllAsync()
     {
         return await _dbSet
-            .AsNoTracking() // Не отслеживаем изменения (read-only)
+            .AsNoTracking() // No tracking for read-only queries
             .ToListAsync();
     }
 
@@ -45,7 +45,7 @@ public class Repository<T> : IRepository<T> where T : class
     {
         return await _dbSet
             .AsNoTracking()
-            .Where(predicate) // LINQ фильтрация
+            .Where(predicate) // LINQ filter
             .ToListAsync();
     }
 
@@ -62,14 +62,14 @@ public class Repository<T> : IRepository<T> where T : class
         int pageNumber, 
         int pageSize)
     {
-        // Подсчитываем общее количество
+        // Count total items
         var totalCount = await _dbSet.CountAsync();
         
-        // Получаем нужную "страницу" данных
+        // Fetch the requested page
         var items = await _dbSet
             .AsNoTracking()
-            .Skip((pageNumber - 1) * pageSize) // Пропускаем предыдущие страницы
-            .Take(pageSize)                     // Берем нужное количество
+            .Skip((pageNumber - 1) * pageSize) // Skip previous pages
+            .Take(pageSize)                     // Take page size
             .ToListAsync();
         
         return (items, totalCount);
@@ -81,19 +81,19 @@ public class Repository<T> : IRepository<T> where T : class
         int pageSize, 
         Expression<Func<T, bool>>? filter = null)
     {
-        // Начинаем с базового запроса
+        // Start from the base query
         IQueryable<T> query = _dbSet.AsNoTracking();
         
-        // Применяем фильтр, если он есть
+        // Apply filter if provided
         if (filter != null)
         {
             query = query.Where(filter);
         }
         
-        // Считаем отфильтрованное количество
+        // Count filtered items
         var totalCount = await query.CountAsync();
         
-        // Получаем страницу
+        // Fetch the page
         var items = await query
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
