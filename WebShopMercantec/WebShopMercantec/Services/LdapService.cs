@@ -54,11 +54,8 @@ public class LdapService : ILdapService
             {
                 Console.WriteLine("Error: " + e.LdapErrorMessage);
             }
-            finally
-            {
-                connection?.Disconnect();
-            }
         }
+        connection?.Disconnect();
 
         return list;
     }

@@ -55,14 +55,38 @@ public class AuthService : IAuthService
             {
                 user = new User
                 {
-                Username = dto.Username,
-                Password = "ADLogin",
-                Activated = true,
-                CreatedAt = DateTime.UtcNow
+                    Username = dto.Username,
+                    Activated = true,
+                    ActivatedAt = DateTime.UtcNow,
+                    ShowInList = true,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow,
+                    Permissions = "{}"
                 };
 
-                await _unitOfWork.Users.AddAsync(user);
-                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.BeginTransactionAsync();
+                try
+                {
+                    await _unitOfWork.Users.AddAsync(user);
+                    await _unitOfWork.SaveChangesAsync();
+
+                    var credits = new WebShopUserCredits
+                    {
+                        UserId = user.Id,
+                        AvailableCredits = 0m,
+                        TotalSpent = 0m,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    };
+                    await _unitOfWork.Context.WebShopUserCredits.AddAsync(credits);
+                    await _unitOfWork.SaveChangesAsync();
+                    await _unitOfWork.CommitTransactionAsync();
+                }
+                catch
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
+                    throw;
+                }
             }
         }
         else if (!VerifyPassword(dto.Password, user.Password))
