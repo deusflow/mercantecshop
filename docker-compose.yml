@@ -29,5 +29,5 @@ volumes:
 
 networks:
   snipeit_default:
-    external: true  # Подключаемся к существующей сети Snipe-IT контейнеров
+    external: true  
 
