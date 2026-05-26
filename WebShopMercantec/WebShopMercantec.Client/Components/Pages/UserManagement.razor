@@ -1,0 +1,390 @@
+@page "/admin/users"
+@attribute [Authorize(Roles = "Admin,SuperAdmin")]
+@using WebShopMercantec.Shared.DTOs
+@inject HttpClient Http
+
+<PageTitle>User Management - TechShop Admin</PageTitle>
+
+<!-- ADMIN USER MANAGEMENT PANEL -->
+<div class="admin-container fade-in">
+    <style>
+        .active-filter {
+            border: 2px solid var(--primary-color) !important;
+            background-color: rgba(var(--primary-color-rgb), 0.05) !important;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+        }
+        .stat-card-admin:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+        }
+    </style>
+    
+    <!-- HEADER -->
+    <div class="page-header">
+        <h1>User Management</h1>
+        <p>Manage users, credit balances, and export data.</p>
+    </div>
+
+    <!-- DASHBOARD STATS -->
+    <div class="admin-stats grid grid-4 mb-xl">
+        <div class="card stat-card-admin @(_currentFilter == null ? "active-filter" : "")" @onclick='() => SetFilter(null)' style="cursor: pointer; transition: all 0.2s;">
+            <div class="stat-content">
+                <span class="stat-label">Total Users</span>
+                <span class="stat-number">@(_stats?.TotalUsers.ToString() ?? "...")</span>
+            </div>
+            <div class="stat-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+            </div>
+        </div>
+        
+        <div class="card stat-card-admin @(_currentFilter == "active" ? "active-filter" : "")" @onclick='() => SetFilter("active")' style="cursor: pointer; transition: all 0.2s;">
+            <div class="stat-content">
+                <span class="stat-label">Active Users</span>
+                <span class="stat-number">@(_stats?.ActiveUsers.ToString() ?? "...")</span>
+            </div>
+            <div class="stat-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+            </div>
+        </div>
+        
+        <div class="card stat-card-admin @(_currentFilter == "hasCredits" || _currentFilter == "noCredits" ? "active-filter" : "")" @onclick="ToggleCreditsFilter" style="cursor: pointer; transition: all 0.2s;">
+            <div class="stat-content">
+                <span class="stat-label flex gap-xs align-center">
+                    Total Credits
+                    @if (_currentFilter == "hasCredits") {
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
+                    } else if (_currentFilter == "noCredits") {
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>
+                    }
+                </span>
+                <span class="stat-number">@(_stats?.TotalCredits.ToString("N0") ?? "...")</span>
+            </div>
+            <div class="stat-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"></path><line x1="12" y1="18" x2="12" y2="22"></line><line x1="12" y1="2" x2="12" y2="6"></line></svg>
+            </div>
+        </div>
+        
+        <div class="card stat-card-admin @(_currentFilter == "hasTransactions" ? "active-filter" : "")" @onclick='() => SetFilter("hasTransactions")' style="cursor: pointer; transition: all 0.2s;">
+            <div class="stat-content">
+                <span class="stat-label">Transactions</span>
+                <span class="stat-number">@(_stats?.TotalTransactions.ToString("N0") ?? "...")</span>
+            </div>
+            <div class="stat-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- USERS TABLE -->
+    <div class="card">
+        <div class="flex-between mb-lg">
+            <h2>All Users</h2>
+            <div class="action-buttons flex gap-md">
+                <input type="text" class="form-input" placeholder="Search users..." style="min-width: 300px;" @bind="_searchTerm" @bind:event="oninput" @onkeyup="HandleSearch" />
+                <button class="btn btn-secondary">Export Data</button>
+            </div>
+        </div>
+        
+        <div class="table-container">
+            @if (_isLoading)
+            {
+                <p>Loading users...</p>
+            }
+            else if (!string.IsNullOrWhiteSpace(_error))
+            {
+                <div class="alert alert-danger">@_error</div>
+            }
+            else if (_users.Count == 0)
+            {
+                <p>No users found.</p>
+            }
+            else
+            {
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th class="text-right">Credits</th>
+                            <th class="text-center">Items</th>
+                            <th class="text-center">Status</th>
+                            <th class="text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var user in _users)
+                        {
+                            <tr>
+                                <td>
+                                    <div class="user-cell">
+                                        <span class="user-avatar-small">@user.Initials</span>
+                                        <span>@user.FullName</span>
+                                    </div>
+                                </td>
+                                <td>@user.Email</td>
+                                <td class="text-right font-weight-bold @(user.IsDebtor ? "text-danger" : "")">
+                                    @user.AvailableCredits.ToString("N0")
+                                </td>
+                                <td class="text-center">@user.CheckedOutItemsCount</td>
+                                <td class="text-center">
+                                    @if(user.IsDebtor)
+                                    {
+                                        <span class="badge badge-warning">Debtor</span>
+                                    }
+                                    else if(user.IsActive)
+                                    {
+                                        <span class="badge badge-success">Active</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge badge-danger">Inactive</span>
+                                    }
+                                </td>
+                                <td class="text-right">
+                                    <div class="action-buttons-table">
+                                        <button class="btn btn-secondary btn-small" @onclick="() => SetupManageCredits(user)">Manage Credits</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </div>
+
+        <!-- Pagination -->
+        @if (_totalPages > 1)
+        {
+            <div class="pagination">
+                <button class="btn btn-secondary btn-small" disabled="@(_page <= 1)" @onclick="PrevPage">Previous</button>
+                <span class="pagination-info">Page @_page of @_totalPages</span>
+                <button class="btn btn-secondary btn-small" disabled="@(_page >= _totalPages)" @onclick="NextPage">Next</button>
+            </div>
+        }
+    </div>
+
+    @if (_showManageCreditsModal)
+    {
+        <div class="modal-backdrop fade-in" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 1000;">
+            <div class="card fade-in" style="width: 420px; z-index: 1001; padding: 2rem; border-radius: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.1);">
+                
+                <h3 class="mb-sm text-center" style="font-weight: 600;">Manage Credits</h3>
+                <p class="text-center text-muted mb-md" style="font-size: 0.9rem;">@_selectedUser?.FullName</p>
+                
+                <!-- Toggle Add / Deduct -->
+                <div class="toggle-switch mb-lg" style="display: flex; background: var(--bg-color); border-radius: 8px; padding: 4px;">
+                    <button class="btn flex-1 py-1 @(_isAddingMode ? "btn-primary" : "btn-text")" style="border-radius: 6px;" @onclick="() => _isAddingMode = true">Add</button>
+                    <button class="btn flex-1 py-1 @(!_isAddingMode ? "btn-primary" : "btn-text")" style="border-radius: 6px;" @onclick="() => _isAddingMode = false">Deduct</button>
+                </div>
+
+                <div class="form-group mb-lg">
+                    <label style="font-weight: 500; font-size: 0.85rem; padding-left: 2px;">Amount</label>
+                    <input type="number" class="form-input w-100 mt-xs" @bind="_creditAmount" min="1" step="1" style="font-size: 1.1rem; padding: 0.75rem 1rem; border-radius: 10px;" />
+                </div>
+                
+                <div class="flex gap-md mt-md">
+                    <button class="btn btn-secondary flex-1" style="border-radius: 10px; padding: 0.75rem;" @onclick="CloseManageCredits" disabled="@_isSavingCredits">Cancel</button>
+                    <button class="btn flex-1 @(_isAddingMode ? "btn-primary" : "btn-danger")" style="border-radius: 10px; padding: 0.75rem;" @onclick="SaveCreditsAsync" disabled="@(_isSavingCredits || _creditAmount <= 0)">
+                        @if (_isSavingCredits)
+                        {
+                            <span>Processing...</span>
+                        }
+                        else
+                        {
+                            <span>@(_isAddingMode ? "Add Credits" : "Deduct Credits")</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+
+</div>
+
+@code {
+    private List<UserDto> _users = new();
+    private AdminStatsDto? _stats;
+    private bool _isLoading = true;
+    private string? _error;
+    private int _page = 1;
+    private int _pageSize = 20;
+    private int _totalPages = 1;
+    private string _searchTerm = "";
+    private string? _currentFilter = null;
+
+    private bool _showManageCreditsModal = false;
+    private bool _isAddingMode = true;
+    private UserDto? _selectedUser;
+    private decimal _creditAmount = 100;
+    private bool _isSavingCredits = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadStatsAsync();
+        await LoadUsersAsync();
+    }
+
+    private async Task LoadStatsAsync()
+    {
+        try
+        {
+            _stats = await Http.GetFromJsonAsync<AdminStatsDto>("/api/Users/stats");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Error loading stats: " + ex.Message);
+        }
+    }
+
+    private async Task LoadUsersAsync()
+    {
+        _isLoading = true;
+        _error = null;
+
+        try
+        {
+            var url = $"/api/Users?page={_page}&pageSize={_pageSize}";
+            if (!string.IsNullOrWhiteSpace(_searchTerm))
+            {
+                url += $"&search={Uri.EscapeDataString(_searchTerm)}";
+            }
+            if (!string.IsNullOrWhiteSpace(_currentFilter))
+            {
+                url += $"&filter={_currentFilter}";
+            }
+
+            var res = await Http.GetFromJsonAsync<PagedResponse<UserDto>>(url);
+            if (res != null)
+            {
+                _users = res.Items ?? new List<UserDto>();
+                _totalPages = res.TotalPages;
+                _page = res.Page;
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = "An error occurred while loading users.";
+            Console.WriteLine(ex.Message);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task HandleSearch(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            _page = 1;
+            await LoadUsersAsync();
+        }
+    }
+
+    private async Task NextPage()
+    {
+        if (_page < _totalPages)
+        {
+            _page++;
+            await LoadUsersAsync();
+        }
+    }
+
+    private async Task PrevPage()
+    {
+        if (_page > 1)
+        {
+            _page--;
+            await LoadUsersAsync();
+        }
+    }
+
+    private async Task SetFilter(string? filter)
+    {
+        if (_currentFilter == filter) return; // ignore if already selected
+        
+        _currentFilter = filter;
+        _page = 1; // reset to first page when filtering
+        await LoadUsersAsync();
+    }
+
+    private async Task ToggleCreditsFilter()
+    {
+        if (_currentFilter == "hasCredits")
+        {
+            _currentFilter = "noCredits";
+        }
+        else if (_currentFilter == "noCredits")
+        {
+            _currentFilter = null;
+        }
+        else
+        {
+            _currentFilter = "hasCredits";
+        }
+        
+        _page = 1;
+        await LoadUsersAsync();
+    }
+
+    private void SetupManageCredits(UserDto user)
+    {
+        _selectedUser = user;
+        _creditAmount = 100;
+        _isAddingMode = true;
+        _showManageCreditsModal = true;
+    }
+
+    private void CloseManageCredits()
+    {
+        _showManageCreditsModal = false;
+        _selectedUser = null;
+    }
+
+    private async Task SaveCreditsAsync()
+    {
+        if (_selectedUser == null || _creditAmount <= 0) return;
+
+        _isSavingCredits = true;
+        try
+        {
+            var endpoint = _isAddingMode 
+                ? $"/api/Users/{_selectedUser.Id}/add-credits" 
+                : $"/api/Users/{_selectedUser.Id}/deduct-credits";
+
+            var res = await Http.PostAsJsonAsync(endpoint, _creditAmount);
+            if (res.IsSuccessStatusCode)
+            {
+                if (_isAddingMode)
+                    _selectedUser.AvailableCredits += _creditAmount; // Optimistic update
+                else
+                    _selectedUser.AvailableCredits -= _creditAmount; // Optimistic update
+                
+                CloseManageCredits();
+                await LoadStatsAsync(); // Refresh stats after modifying credits
+            }
+            else
+            {
+                // handle error
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+        }
+        finally
+        {
+            _isSavingCredits = false;
+        }
+    }
+
+    public class PagedResponse<T>
+    {
+        public List<T> Items { get; set; } = new();
+        public int TotalCount { get; set; }
+        public int Page { get; set; }
+        public int PageSize { get; set; }
+        public int TotalPages { get; set; }
+    }
+}

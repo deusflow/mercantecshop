@@ -4,109 +4,69 @@ using WebShopMercantec.Repositories.Specific;
 
 namespace WebShopMercantec.Repositories;
 
-/// <summary>
-/// Unit of Work Implementation
-/// Реализация паттерна Unit of Work для координации работы репозиториев
-/// </summary>
 public class UnitOfWork : IUnitOfWork
 {
     private readonly SnipeItContext _context;
     private IDbContextTransaction? _transaction;
-    
-    // Приватные поля для lazy initialization репозиториев
-    private IUserRepository? _users;
-    private IProductRepository? _products;
-    private IOrderRepository? _orders;
-    private IAccessoryRepository? _accessories;
 
-    /// <summary>
-    /// Конструктор - принимает DbContext через Dependency Injection
-    /// </summary>
-    public UnitOfWork(SnipeItContext context)
+    
+    public UnitOfWork(
+        SnipeItContext context,
+        IUserRepository users,
+        IProductRepository products,
+        IOrderRepository orders,
+        IAccessoryRepository accessories,
+        ICategoryRepository categories,
+        IManufacturerRepository manufacturers,
+        ISupplierRepository suppliers,
+        ILocationRepository locations,
+        IStatusLabelRepository statusLabels)
     {
         _context = context;
+        Users = users;
+        Products = products;
+        Orders = orders;
+        Accessories = accessories;
+        Categories = categories;
+        Manufacturers = manufacturers;
+        Suppliers = suppliers;
+        Locations = locations;
+        StatusLabels = statusLabels;
     }
 
-    /// <summary>
-    /// Репозиторий пользователей
-    /// Lazy Loading: создается только когда первый раз используется
-    /// </summary>
-    public IUserRepository Users
-    {
-        get
-        {
-            // Если еще не создан - создаем
-            _users ??= new UserRepository(_context);
-            return _users;
-        }
-    }
+    // === REPOSITORIES (via DI) ===
+    
+    public IUserRepository Users { get; }
+    public IProductRepository Products { get; }
+    public IOrderRepository Orders { get; }
+    public IAccessoryRepository Accessories { get; }
+    public ICategoryRepository Categories { get; }
+    public IManufacturerRepository Manufacturers { get; }
+    public ISupplierRepository Suppliers { get; }
+    public ILocationRepository Locations { get; }
+    public IStatusLabelRepository StatusLabels { get; }
 
-    /// <summary>
-    /// Репозиторий продуктов (Assets)
-    /// </summary>
-    public IProductRepository Products
-    {
-        get
-        {
-            _products ??= new ProductRepository(_context);
-            return _products;
-        }
-    }
+    
+    public SnipeItContext Context => _context;
 
-    /// <summary>
-    /// Репозиторий заказов (CheckoutRequests)
-    /// </summary>
-    public IOrderRepository Orders
-    {
-        get
-        {
-            _orders ??= new OrderRepository(_context);
-            return _orders;
-        }
-    }
+    // === CONTROL METHODS ===
 
-    /// <summary>
-    /// Репозиторий аксессуаров
-    /// </summary>
-    public IAccessoryRepository Accessories
-    {
-        get
-        {
-            _accessories ??= new AccessoryRepository(_context);
-            return _accessories;
-        }
-    }
-
-    /// <summary>
-    /// Сохранить все изменения в БД
-    /// Это ЕДИНСТВЕННАЯ точка, где данные реально записываются в БД!
-    /// </summary>
-    /// <returns>Количество измененных записей</returns>
+    
     public async Task<int> SaveChangesAsync()
     {
         return await _context.SaveChangesAsync();
     }
 
-    /// <summary>
-    /// Начать транзакцию БД
-    /// 
-    /// КОГДА ИСПОЛЬЗОВАТЬ?
-    /// Когда нужно выполнить несколько операций, и либо все должны пройти успешно,
-    /// либо все должны откатиться.
-    /// 
-    /// ПРИМЕР:
-    /// - Создание заказа + списание кредитов + обновление статуса товара
-    /// Если что-то пойдет не так - все откатывается!
-    /// </summary>
+    
     public async Task BeginTransactionAsync()
     {
+        if (_transaction != null)
+            return;
+
         _transaction = await _context.Database.BeginTransactionAsync();
     }
 
-    /// <summary>
-    /// Зафиксировать транзакцию
-    /// Применяет все изменения, сделанные в рамках транзакции
-    /// </summary>
+    
     public async Task CommitTransactionAsync()
     {
         if (_transaction != null)
@@ -117,10 +77,7 @@ public class UnitOfWork : IUnitOfWork
         }
     }
 
-    /// <summary>
-    /// Откатить транзакцию
-    /// Отменяет ВСЕ изменения, сделанные после BeginTransactionAsync()
-    /// </summary>
+    
     public async Task RollbackTransactionAsync()
     {
         if (_transaction != null)
@@ -131,10 +88,7 @@ public class UnitOfWork : IUnitOfWork
         }
     }
 
-    /// <summary>
-    /// Освободить ресурсы
-    /// Вызывается автоматически DI контейнером
-    /// </summary>
+    
     public void Dispose()
     {
         _transaction?.Dispose();

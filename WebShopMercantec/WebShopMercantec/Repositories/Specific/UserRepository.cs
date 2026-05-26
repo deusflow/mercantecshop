@@ -3,77 +3,64 @@ using WebShopMercantec.Models;
 
 namespace WebShopMercantec.Repositories.Specific;
 
-/// <summary>
-/// User Repository Implementation
-/// Реализация репозитория для работы с пользователями
-/// Наследуется от базового Repository и добавляет специфичные методы
-/// </summary>
 public class UserRepository : Repository<User>, IUserRepository
 {
-    /// <summary>
-    /// Конструктор - передает контекст в базовый класс
-    /// </summary>
+    
     public UserRepository(SnipeItContext context) : base(context)
     {
     }
 
-    /// <summary>
-    /// Найти пользователя по email (case-insensitive)
-    /// </summary>
+    
     public async Task<User?> GetByEmailAsync(string email)
     {
+        var normalized = email.Trim();
+
         return await _dbSet
             .AsNoTracking()
-            .FirstOrDefaultAsync(u => u.Email!.ToLower() == email.ToLower());
+            .FirstOrDefaultAsync(u => u.Email != null && u.Email == normalized);
     }
 
-    /// <summary>
-    /// Найти пользователя по username (case-insensitive)
-    /// </summary>
+    
     public async Task<User?> GetByUsernameAsync(string username)
     {
+        var normalized = username.Trim();
+
         return await _dbSet
             .AsNoTracking()
-            .FirstOrDefaultAsync(u => u.Username!.ToLower() == username.ToLower());
+            .FirstOrDefaultAsync(u => u.Username != null && u.Username == normalized);
     }
 
-    /// <summary>
-    /// Найти пользователя по email ИЛИ username
-    /// Проверяет оба поля одновременно
-    /// </summary>
+    
     public async Task<User?> GetByEmailOrUsernameAsync(string emailOrUsername)
     {
-        var searchTerm = emailOrUsername.ToLower();
+        var searchTerm = emailOrUsername.Trim();
         
         return await _dbSet
             .AsNoTracking()
             .FirstOrDefaultAsync(u => 
-                u.Email!.ToLower() == searchTerm || 
-                u.Username!.ToLower() == searchTerm);
+                (u.Email != null && u.Email == searchTerm) ||
+                (u.Username != null && u.Username == searchTerm));
     }
 
-    /// <summary>
-    /// Проверить существование email
-    /// </summary>
+    
     public async Task<bool> EmailExistsAsync(string email)
     {
+        var normalized = email.Trim();
+
         return await _dbSet
-            .AnyAsync(u => u.Email!.ToLower() == email.ToLower());
+            .AnyAsync(u => u.Email != null && u.Email == normalized);
     }
 
-    /// <summary>
-    /// Проверить существование username
-    /// </summary>
+    
     public async Task<bool> UsernameExistsAsync(string username)
     {
+        var normalized = username.Trim();
+
         return await _dbSet
-            .AnyAsync(u => u.Username!.ToLower() == username.ToLower());
+            .AnyAsync(u => u.Username != null && u.Username == normalized);
     }
 
-    /// <summary>
-    /// Получить всех активированных пользователей
-    /// Фильтруем по Activated = true и DeletedAt = null (не удаленные)
-    /// </summary>
+    
     public async Task<IEnumerable<User>> GetActivatedUsersAsync()
     {
         return await _dbSet
@@ -82,9 +69,7 @@ public class UserRepository : Repository<User>, IUserRepository
             .ToListAsync();
     }
 
-    /// <summary>
-    /// Получить пользователей по компании
-    /// </summary>
+    
     public async Task<IEnumerable<User>> GetByCompanyIdAsync(uint companyId)
     {
         return await _dbSet
@@ -93,9 +78,7 @@ public class UserRepository : Repository<User>, IUserRepository
             .ToListAsync();
     }
 
-    /// <summary>
-    /// Получить пользователей по локации
-    /// </summary>
+    
     public async Task<IEnumerable<User>> GetByLocationIdAsync(int locationId)
     {
         return await _dbSet
@@ -104,9 +87,7 @@ public class UserRepository : Repository<User>, IUserRepository
             .ToListAsync();
     }
 
-    /// <summary>
-    /// Получить пользователей по департаменту
-    /// </summary>
+    
     public async Task<IEnumerable<User>> GetByDepartmentIdAsync(int departmentId)
     {
         return await _dbSet
@@ -115,10 +96,7 @@ public class UserRepository : Repository<User>, IUserRepository
             .ToListAsync();
     }
 
-    /// <summary>
-    /// Получить пользователей для отображения в списках
-    /// ShowInList = true (по умолчанию true, но проверяем)
-    /// </summary>
+    
     public async Task<IEnumerable<User>> GetUsersForListAsync()
     {
         return await _dbSet
@@ -127,29 +105,23 @@ public class UserRepository : Repository<User>, IUserRepository
             .ToListAsync();
     }
 
-    /// <summary>
-    /// Поиск пользователей по строке
-    /// Ищем в FirstName, LastName, Email, Username
-    /// </summary>
+    
     public async Task<IEnumerable<User>> SearchUsersAsync(string searchTerm)
     {
-        var term = searchTerm.ToLower();
+        var term = $"%{searchTerm.Trim()}%";
         
         return await _dbSet
             .AsNoTracking()
             .Where(u => u.DeletedAt == null && (
-                (u.FirstName != null && u.FirstName.ToLower().Contains(term)) ||
-                (u.LastName != null && u.LastName.ToLower().Contains(term)) ||
-                (u.Email != null && u.Email.ToLower().Contains(term)) ||
-                (u.Username != null && u.Username.ToLower().Contains(term))
+                (u.FirstName != null && EF.Functions.Like(u.FirstName, term)) ||
+                (u.LastName != null && EF.Functions.Like(u.LastName, term)) ||
+                (u.Email != null && EF.Functions.Like(u.Email, term)) ||
+                (u.Username != null && EF.Functions.Like(u.Username, term))
             ))
             .ToListAsync();
     }
 
-    /// <summary>
-    /// Получить пользователей с пагинацией и множественными фильтрами
-    /// Самый сложный и полезный метод для админ-панели
-    /// </summary>
+    
     public async Task<(IEnumerable<User> Users, int TotalCount)> GetUsersPagedAsync(
         int pageNumber, 
         int pageSize, 
@@ -157,41 +129,41 @@ public class UserRepository : Repository<User>, IUserRepository
         bool? activated = null, 
         uint? companyId = null)
     {
-        // Начинаем с базового запроса
+        // Start from the base query
         var query = _dbSet.AsNoTracking().Where(u => u.DeletedAt == null);
         
-        // Применяем фильтры, если они заданы
+        // Apply filters if provided
         
-        // Фильтр по поиску
+        // Search filter
         if (!string.IsNullOrWhiteSpace(searchTerm))
         {
-            var term = searchTerm.ToLower();
+            var term = $"%{searchTerm.Trim()}%";
             query = query.Where(u =>
-                (u.FirstName != null && u.FirstName.ToLower().Contains(term)) ||
-                (u.LastName != null && u.LastName.ToLower().Contains(term)) ||
-                (u.Email != null && u.Email.ToLower().Contains(term)) ||
-                (u.Username != null && u.Username.ToLower().Contains(term))
+                (u.FirstName != null && EF.Functions.Like(u.FirstName, term)) ||
+                (u.LastName != null && EF.Functions.Like(u.LastName, term)) ||
+                (u.Email != null && EF.Functions.Like(u.Email, term)) ||
+                (u.Username != null && EF.Functions.Like(u.Username, term))
             );
         }
         
-        // Фильтр по статусу активации
+        // Activation status filter
         if (activated.HasValue)
         {
             query = query.Where(u => u.Activated == activated.Value);
         }
         
-        // Фильтр по компании
+        // Company filter
         if (companyId.HasValue)
         {
             query = query.Where(u => u.CompanyId == companyId.Value);
         }
         
-        // Считаем общее количество (после применения фильтров)
+        // Count total items (after filters)
         var totalCount = await query.CountAsync();
         
-        // Получаем страницу с сортировкой по ID
+        // Fetch the page sorted by ID
         var users = await query
-            .OrderBy(u => u.Id) // Сортировка для стабильной пагинации
+            .OrderBy(u => u.Id) // Stable sort for pagination
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();

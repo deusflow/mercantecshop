@@ -3,20 +3,13 @@ using WebShopMercantec.Models;
 
 namespace WebShopMercantec.Repositories.Specific;
 
-/// <summary>
-/// Order Repository Implementation
-/// Реализация репозитория для работы с заказами (CheckoutRequests)
-/// </summary>
 public class OrderRepository : Repository<CheckoutRequest>, IOrderRepository
 {
     public OrderRepository(SnipeItContext context) : base(context)
     {
     }
 
-    /// <summary>
-    /// Получить все заказы пользователя
-    /// Сортируем по дате создания (новые первыми)
-    /// </summary>
+    
     public async Task<IEnumerable<CheckoutRequest>> GetUserOrdersAsync(int userId)
     {
         return await _dbSet
@@ -26,9 +19,7 @@ public class OrderRepository : Repository<CheckoutRequest>, IOrderRepository
             .ToListAsync();
     }
 
-    /// <summary>
-    /// Получить заказы пользователя с пагинацией
-    /// </summary>
+    
     public async Task<(IEnumerable<CheckoutRequest> Orders, int TotalCount)> GetUserOrdersPagedAsync(
         int userId, 
         int pageNumber, 
@@ -49,10 +40,7 @@ public class OrderRepository : Repository<CheckoutRequest>, IOrderRepository
         return (orders, totalCount);
     }
 
-    /// <summary>
-    /// Получить ожидающие заказы (Pending)
-    /// Pending = CreatedAt есть, но FulfilledAt и CanceledAt = null
-    /// </summary>
+    
     public async Task<IEnumerable<CheckoutRequest>> GetPendingOrdersAsync()
     {
         return await _dbSet
@@ -61,13 +49,11 @@ public class OrderRepository : Repository<CheckoutRequest>, IOrderRepository
                 o.DeletedAt == null &&
                 o.FulfilledAt == null &&
                 o.CanceledAt == null)
-            .OrderBy(o => o.CreatedAt) // Старые заказы первыми (очередь)
+            .OrderBy(o => o.CreatedAt) // Oldest orders first (queue)
             .ToListAsync();
     }
 
-    /// <summary>
-    /// Получить выполненные заказы (Fulfilled)
-    /// </summary>
+    
     public async Task<IEnumerable<CheckoutRequest>> GetFulfilledOrdersAsync()
     {
         return await _dbSet
@@ -79,9 +65,7 @@ public class OrderRepository : Repository<CheckoutRequest>, IOrderRepository
             .ToListAsync();
     }
 
-    /// <summary>
-    /// Получить отмененные заказы (Canceled)
-    /// </summary>
+    
     public async Task<IEnumerable<CheckoutRequest>> GetCanceledOrdersAsync()
     {
         return await _dbSet
@@ -93,15 +77,13 @@ public class OrderRepository : Repository<CheckoutRequest>, IOrderRepository
             .ToListAsync();
     }
 
-    /// <summary>
-    /// Получить заказы по статусу с пагинацией
-    /// </summary>
+    
     public async Task<(IEnumerable<CheckoutRequest> Orders, int TotalCount)> GetOrdersByStatusPagedAsync(
         string status, 
         int pageNumber, 
         int pageSize)
     {
-        // Строим запрос в зависимости от статуса
+        // Build query based on status
         IQueryable<CheckoutRequest> query = status.ToLower() switch
         {
             "pending" => _dbSet.AsNoTracking().Where(o =>
@@ -131,10 +113,7 @@ public class OrderRepository : Repository<CheckoutRequest>, IOrderRepository
         return (orders, totalCount);
     }
 
-    /// <summary>
-    /// Получить все заказы с множественными фильтрами
-    /// ОСНОВНОЙ МЕТОД ДЛЯ АДМИН-ПАНЕЛИ
-    /// </summary>
+    
     public async Task<(IEnumerable<CheckoutRequest> Orders, int TotalCount)> GetAllOrdersPagedAsync(
         int pageNumber, 
         int pageSize, 
@@ -145,7 +124,7 @@ public class OrderRepository : Repository<CheckoutRequest>, IOrderRepository
     {
         var query = _dbSet.AsNoTracking().Where(o => o.DeletedAt == null);
         
-        // Фильтр по статусу
+        // Status filter
         if (!string.IsNullOrWhiteSpace(status))
         {
             query = status.ToLower() switch
@@ -157,19 +136,19 @@ public class OrderRepository : Repository<CheckoutRequest>, IOrderRepository
             };
         }
         
-        // Фильтр по пользователю
+        // User filter
         if (userId.HasValue)
         {
             query = query.Where(o => o.UserId == userId.Value);
         }
         
-        // Фильтр по дате (от)
+        // Date filter (from)
         if (fromDate.HasValue)
         {
             query = query.Where(o => o.CreatedAt >= fromDate.Value);
         }
         
-        // Фильтр по дате (до)
+        // Date filter (to)
         if (toDate.HasValue)
         {
             query = query.Where(o => o.CreatedAt <= toDate.Value);
@@ -186,9 +165,7 @@ public class OrderRepository : Repository<CheckoutRequest>, IOrderRepository
         return (orders, totalCount);
     }
 
-    /// <summary>
-    /// Получить историю заказов для конкретного товара (Asset)
-    /// </summary>
+    
     public async Task<IEnumerable<CheckoutRequest>> GetOrdersForAssetAsync(int assetId)
     {
         return await _dbSet
@@ -201,9 +178,7 @@ public class OrderRepository : Repository<CheckoutRequest>, IOrderRepository
             .ToListAsync();
     }
 
-    /// <summary>
-    /// Получить историю заказов для аксессуара
-    /// </summary>
+    
     public async Task<IEnumerable<CheckoutRequest>> GetOrdersForAccessoryAsync(int accessoryId)
     {
         return await _dbSet
@@ -216,10 +191,7 @@ public class OrderRepository : Repository<CheckoutRequest>, IOrderRepository
             .ToListAsync();
     }
 
-    /// <summary>
-    /// Проверить, есть ли у пользователя активный заказ на данный товар
-    /// Предотвращает дубликаты заказов
-    /// </summary>
+    
     public async Task<bool> HasActivePendingOrderAsync(
         int userId, 
         int requestableId, 
@@ -235,19 +207,14 @@ public class OrderRepository : Repository<CheckoutRequest>, IOrderRepository
                 o.DeletedAt == null);
     }
 
-    /// <summary>
-    /// Подсчитать количество заказов пользователя
-    /// </summary>
+    
     public async Task<int> GetUserOrderCountAsync(int userId)
     {
         return await _dbSet
             .CountAsync(o => o.UserId == userId && o.DeletedAt == null);
     }
 
-    /// <summary>
-    /// Подсчитать количество ожидающих заказов
-    /// Для badge в админ-панели
-    /// </summary>
+    
     public async Task<int> GetPendingOrderCountAsync()
     {
         return await _dbSet
@@ -257,10 +224,7 @@ public class OrderRepository : Repository<CheckoutRequest>, IOrderRepository
                 o.DeletedAt == null);
     }
 
-    /// <summary>
-    /// Получить заказы за период
-    /// Для статистики и отчетов
-    /// </summary>
+    
     public async Task<IEnumerable<CheckoutRequest>> GetOrdersByDateRangeAsync(
         DateTime fromDate, 
         DateTime toDate)
@@ -275,10 +239,7 @@ public class OrderRepository : Repository<CheckoutRequest>, IOrderRepository
             .ToListAsync();
     }
 
-    /// <summary>
-    /// Получить последние N заказов
-    /// Для dashboard и recent activity
-    /// </summary>
+    
     public async Task<IEnumerable<CheckoutRequest>> GetRecentOrdersAsync(int count = 10)
     {
         return await _dbSet

@@ -1,0 +1,292 @@
+@page "/product/{id:int}"
+@using WebShopMercantec.Shared.DTOs
+@using Microsoft.AspNetCore.Components.Authorization
+@inject HttpClient Http
+@inject NavigationManager Nav
+@inject AuthenticationStateProvider AuthStateProvider
+
+<PageTitle>Product Details - TechShop</PageTitle>
+
+<!-- PRODUCT DETAILS -->
+<div class="product-details-container fade-in">
+    
+    <!-- "Back" Button -->
+    <div class="back-link-container">
+        <NavLink href="/" class="back-link">‹ Back to Catalog</NavLink>
+    </div>
+
+    @if (_isLoading)
+    {
+        <p>Loading product details...</p>
+    }
+    else if (!string.IsNullOrWhiteSpace(_error))
+    {
+        <div class="alert alert-danger" role="alert">@_error</div>
+    }
+    else if (_product is null)
+    {
+        <div class="alert alert-info" role="alert">Product not found.</div>
+    }
+    else
+    {
+
+    <div class="product-details-layout">
+        
+        <!-- LEFT SIDE: PRODUCT IMAGE -->
+        <div class="product-image-section">
+            <div class="product-main-image">
+                <div class="placeholder-image-large"></div>
+            </div>
+        </div>
+
+        <!-- RIGHT SIDE: PRODUCT INFO -->
+        <div class="product-info-section">
+            
+            <!-- Name and Category -->
+            <div class="product-category">
+                <span class="badge badge-primary">@_product.CategoryName</span>
+            </div>
+            
+            <h1 class="product-title-large">@_product.Name</h1>
+            
+            <p class="product-description-large">
+                @(!string.IsNullOrWhiteSpace(_product.Notes) ? _product.Notes : "No description provided.")
+            </p>
+
+            <!-- Price and Actions -->
+            <div class="product-purchase-section card">
+                <div class="price-section">
+                    <span class="price-label">Price</span>
+                    <span class="price-value">@_product.Price Credits</span>
+                </div>
+
+                <div class="purchase-actions">
+                    @if (!string.IsNullOrEmpty(_purchaseError))
+                    {
+                        <div class="alert alert-danger" role="alert" style="margin-bottom: 15px;">
+                            @_purchaseError
+                        </div>
+                    }
+                    @if (!string.IsNullOrEmpty(_purchaseSuccess))
+                    {
+                        <div class="alert alert-success" role="alert" style="margin-bottom: 15px;">
+                            @_purchaseSuccess
+                        </div>
+                    }
+                    @if (!string.IsNullOrEmpty(_authError))
+                    {
+                        <div class="alert alert-warning" role="alert" style="margin-bottom: 15px;">
+                            @_authError
+                        </div>
+                    }
+
+                    @if (_product.IsAvailable)
+                    {
+                        @if (!_isAuthenticated)
+                        {
+                            <button class="btn btn-primary btn-large" style="width: 100%;" disabled>
+                                Sign in to purchase
+                            </button>
+                        }
+                        else if (!_showConfirm)
+                        {
+                            <button class="btn btn-primary btn-large" style="width: 100%;" @onclick="() => _showConfirm = true">
+                                Purchase with Credits
+                            </button>
+                        }
+                        else
+                        {
+                            <div class="confirmation-box fade-in" style="background: var(--color-surface, #1a1a1c); padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #333;">
+                                <p style="margin-bottom: 15px; font-weight: 500;">Confirm purchase for <strong>@_product.Price credits</strong>?</p>
+                                <div style="display: flex; gap: 10px;">
+                                    <button class="btn btn-primary" style="flex: 1; background-color: var(--color-success, #30d158);" disabled="@_isPurchasing" @onclick="PurchaseAsync">
+                                        @if (_isPurchasing)
+                                        {
+                                            <span>Processing...</span>
+                                        }
+                                        else
+                                        {
+                                            <span>Yes, Buy</span>
+                                        }
+                                    </button>
+                                    <button class="btn btn-secondary" style="flex: 1;" disabled="@_isPurchasing" @onclick="() => _showConfirm = false">
+                                        Cancel
+                                    </button>
+                                </div>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <button class="btn btn-primary btn-large" style="width: 100%; background-color: #666; cursor: not-allowed;" disabled>
+                            Out of Stock
+                        </button>
+                    }
+                </div>
+                
+                <p class="purchase-info">
+                    Availability:
+                    <strong>@(_product.IsAvailable ? "In Stock" : "Unavailable")</strong>
+                </p>
+            </div>
+
+            <!-- Specifications -->
+            <div class="product-specs">
+                <div class="spec-item">
+                    <span class="spec-label">Manufacturer</span>
+                    <span class="spec-value">@(_product.ManufacturerName ?? "-" )</span>
+                </div>
+                <div class="spec-item">
+                    <span class="spec-label">Model</span>
+                    <span class="spec-value">@(_product.ModelName ?? "-" )</span>
+                </div>
+                <div class="spec-item">
+                    <span class="spec-label">Location</span>
+                    <span class="spec-value">@(_product.LocationName ?? "-" )</span>
+                </div>
+                <div class="spec-item">
+                    <span class="spec-label">Status</span>
+                    <span class="spec-value">@_product.StatusLabel</span>
+                </div>
+                <div class="spec-item">
+                    <span class="spec-label">Availability</span>
+                    <span class="spec-value @(_product.IsAvailable ? "text-success" : "text-danger")">
+                        @(_product.IsAvailable ? "In Stock" : "Unavailable")
+                    </span>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ADDITIONAL INFORMATION -->
+    <div class="additional-info card mt-xl">
+        <h2>Good to Know</h2>
+        
+        <div class="info-grid">
+            <div class="info-section">
+                <h3>📦 Delivery</h3>
+                <p>
+                    Available for pickup at the IT department within 1-2 business days. You will be notified via email.
+                </p>
+            </div>
+            
+            <div class="info-section">
+                <h3>🔒 Policy</h3>
+                <p>
+                    All equipment purchases are final. Credits cannot be refunded once the transaction is completed.
+                </p>
+            </div>
+            
+            <div class="info-section">
+                <h3>💡 Support</h3>
+                <p>
+                    For technical support, please contact the IT department at it@mercantec.dk.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    }
+
+</div>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private ProductDto? _product;
+    private bool _isLoading;
+    private string? _error;
+
+    private bool _isAuthenticated;
+    private string? _authError;
+    private bool _showConfirm;
+    private bool _isPurchasing;
+    private string? _purchaseError;
+    private string? _purchaseSuccess;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _isLoading = true;
+        _error = null;
+        _product = null;
+        _authError = null;
+
+        try
+        {
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            _isAuthenticated = authState.User.Identity?.IsAuthenticated == true;
+
+            _product = await Http.GetFromJsonAsync<ProductDto>($"/api/products/{Id}");
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task PurchaseAsync()
+    {
+        if (_product == null || !_product.IsAvailable) return;
+        if (!_isAuthenticated)
+        {
+            _authError = "Only signed-in users can purchase.";
+            return;
+        }
+
+        if (_isPurchasing) return;
+
+        _isPurchasing = true;
+        _purchaseError = null;
+        _purchaseSuccess = null;
+        _authError = null;
+        _showConfirm = false; // Hide confirmation block during processing
+
+        try
+        {
+            var order = new OrderCreateDto
+            {
+                RequestableId = _product.Id,
+                RequestableType = "asset", // By default we assume we are buying an asset
+                Quantity = 1,
+                Notes = "Direct purchase from WebShop"
+            };
+
+            var response = await Http.PostAsJsonAsync("/api/Orders", order);
+
+            if (response.IsSuccessStatusCode)
+            {
+                _purchaseSuccess = "Order placed successfully! Credits have been deducted.";
+                _product.IsAvailable = false; // Mark unavailable so user can't click twice
+            }
+            else
+            {
+                var errorText = await response.Content.ReadAsStringAsync();
+                if (errorText.Contains("InsufficientCredits", StringComparison.OrdinalIgnoreCase) || 
+                    errorText.Contains("insufficient credits", StringComparison.OrdinalIgnoreCase) ||
+                    errorText.Contains("affordable", StringComparison.OrdinalIgnoreCase))
+                {
+                    _purchaseError = "Insufficient credits. You do not have enough credits to purchase this item.";
+                }
+                else
+                {
+                    _purchaseError = $"Failed to purchase: {errorText}";
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _purchaseError = $"Network or server error: {ex.Message}";
+        }
+        finally
+        {
+            _isPurchasing = false;
+            StateHasChanged();
+        }
+    }
+}

@@ -1,0 +1,198 @@
+/* ===== СТИЛИ ДЛЯ ГЛАВНОЙ СТРАНИЦЫ (КАТАЛОГ) ===== */
+
+/* Заголовок страницы */
+.page-header {
+    margin-bottom: var(--spacing-xxl);
+    text-align: center;
+    max-width: 860px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.page-header h1,
+.page-header .hero-subtitle {
+    text-align: center;
+}
+
+.page-header .hero-subtitle {
+    max-width: 620px;
+    margin: 0.5rem auto 0;
+    font-size: 21px;
+    color: var(--color-text-secondary);
+    display: block;
+    text-align: center !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+}
+
+.categories-section h2 {
+    margin: 0;
+}
+
+.categories-header {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: var(--spacing-md);
+    flex-wrap: wrap;
+}
+
+.category-grid {
+    gap: var(--spacing-md);
+    grid-template-columns: repeat(auto-fit, minmax(220px, 260px));
+    justify-content: center;
+}
+
+.category-card {
+    width: 100%;
+    max-width: 260px;
+    border: 1px solid var(--color-surface-hover);
+    text-align: center;
+    background: var(--color-surface);
+    transition: all var(--transition-duration) ease;
+}
+
+.category-card h3 {
+    margin-bottom: var(--spacing-xs);
+    font-size: 18px;
+}
+
+.category-card p {
+    margin: 0;
+    color: var(--color-text-secondary);
+}
+
+.category-card:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--color-text-secondary);
+}
+
+.category-card:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.category-active {
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.2);
+}
+
+/* Секция фильтров */
+.filters-section {
+    margin-bottom: var(--spacing-xl);
+}
+
+.filter-buttons {
+    flex-wrap: wrap;
+}
+
+/* Карточка продукта */
+.product-card {
+    display: flex;
+    flex-direction: column;
+    cursor: pointer;
+    max-width: 320px;
+    width: 100%;
+    /* Убираем тень по умолчанию, так как она теперь на .card */
+}
+
+.products-grid {
+    grid-template-columns: repeat(auto-fit, minmax(260px, 320px));
+    justify-content: center;
+}
+
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: var(--spacing-md);
+    flex-wrap: wrap;
+}
+
+.product-image {
+    width: 100%;
+    padding-top: 75%; /* Соотношение сторон 4:3 */
+    position: relative;
+    background-color: var(--color-surface-elevated);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--spacing-lg);
+    overflow: hidden;
+}
+
+.placeholder-image {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    /* Градиент вместо иконки */
+    background: linear-gradient(135deg, var(--color-surface-elevated) 25%, var(--color-surface-hover) 100%);
+    transition: transform var(--transition-duration) ease;
+}
+
+.product-card:hover .placeholder-image {
+    transform: scale(1.1);
+}
+
+.product-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 0 var(--spacing-sm);
+}
+
+.product-title {
+    font-size: 21px;
+    font-weight: 600;
+    margin-bottom: var(--spacing-sm);
+    color: var(--color-text-primary);
+}
+
+.product-description {
+    font-size: 15px;
+    color: var(--color-text-secondary);
+    margin-bottom: var(--spacing-md);
+    flex: 1;
+}
+
+.product-price {
+    font-size: 19px;
+    font-weight: 600;
+    color: var(--color-text-primary);
+}
+
+/* Анимации с задержкой */
+.fade-in-item {
+    opacity: 0; /* Начальное состояние для анимации */
+}
+
+.delay-1 { animation-delay: 0.1s; }
+.delay-2 { animation-delay: 0.15s; }
+.delay-3 { animation-delay: 0.2s; }
+.delay-4 { animation-delay: 0.25s; }
+.delay-5 { animation-delay: 0.3s; }
+.delay-6 { animation-delay: 0.35s; }
+.delay-7 { animation-delay: 0.4s; }
+.delay-8 { animation-delay: 0.45s; }
+
+
+/* Адаптивность для поиска */
+@media (max-width: 768px) {
+    .filters-section .flex-center {
+        flex-direction: column;
+        gap: var(--spacing-md);
+    }
+
+    .category-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .products-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .search-box input {
+        min-width: 100% !important;
+    }
+}

@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  webshop:
+    build: .
+    container_name: webshop-app
+    ports:
+      - "8060:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__DefaultConnection=Server=snipeit-db-1;Port=3306;Database=snipeit;User=snipeit;Password=${DB_PASSWORD};
+      - Jwt__Key=${JWT_SECRET_KEY}
+      - Jwt__Issuer=WebShopMercantec
+      - Jwt__Audience=WebShopMercantec.Client
+    volumes:
+      - webshop-logs:/app/logs
+    networks:
+      - snipeit_default
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+volumes:
+  webshop-logs:
+
+networks:
+  snipeit_default:
+    external: true  # Подключаемся к существующей сети Snipe-IT контейнеров
+

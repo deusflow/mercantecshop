@@ -1,0 +1,96 @@
+﻿@namespace WebShopMercantec.Client.Components.Layout
+@inherits MainLayoutBase
+@inject WebShopMercantec.Client.Auth.AuthStateProvider AuthState
+@inject NavigationManager Nav
+@inject HttpClient Http
+
+<div class="app-container">
+    <nav class="navbar">
+        <div class="container navbar-content">
+            <NavLink href="/" Match="NavLinkMatch.All" class="navbar-brand">TechShop</NavLink>
+
+            <ul class="navbar-menu">
+                <li><NavLink href="/" Match="NavLinkMatch.All" class="navbar-link">Catalog</NavLink></li>
+
+                <AuthorizeView>
+                    <Authorized>
+                        <li><NavLink href="/user-profile" class="navbar-link">Profile</NavLink></li>
+                        <AuthorizeView Roles="Admin,SuperAdmin">
+                            <Authorized Context="adminCtx">
+                                <li><NavLink href="/admin/users" class="navbar-link">Admin Users</NavLink></li>
+                                <li><NavLink href="/admin/devices" class="navbar-link">Admin Devices</NavLink></li>
+                                <li><NavLink href="/admin/orders" class="navbar-link">Admin Orders</NavLink></li>
+                            </Authorized>
+                        </AuthorizeView>
+                        <li>
+                            <button class="navbar-link" style="background:none; border:none; padding:0; cursor:pointer;" @onclick="LogoutAsync">Log out</button>
+                        </li>
+                    </Authorized>
+                    <NotAuthorized>
+                        <li><NavLink href="/login" class="navbar-link">Login</NavLink></li>
+                    </NotAuthorized>
+                </AuthorizeView>
+            </ul>
+
+            <AuthorizeView>
+                <Authorized>
+                    <div class="user-credits">
+                        <span class="badge badge-success">@(_credits.HasValue ? $"{_credits.Value:N0} Credits" : "Loading Credits...")</span>
+                    </div>
+                </Authorized>
+            </AuthorizeView>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <div class="container">
+            @PageBody
+        </div>
+    </main>
+
+    <footer class="footer text-center">
+        <div class="container">
+            <p style="color: #9aa0a6;">
+                 © 2025 Mercantec Shop. All rights reserved.
+            </p>
+        </div>
+    </footer>
+</div>
+
+<div id="blazor-error-ui" data-nosnippet>
+    An unhandled error has occurred.
+    <a href="." class="reload">Reload</a>
+    <span class="dismiss">🗙</span>
+</div>
+
+@code {
+    private async Task LogoutAsync()
+    {
+        // erase the auth cookie and mark user as logged out in the state provider
+        await AuthState.MarkUserLoggedOutAsync();
+        
+        // swipe to the login page
+        Nav.NavigateTo("/login");
+    }
+    
+    private decimal? _credits;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Check if user is logged in
+        var authState = await AuthState.GetAuthenticationStateAsync();
+        if (authState.User.Identity?.IsAuthenticated == true)
+        {
+            try
+            {
+                // Fetch balance from the server
+                var user = await Http.GetFromJsonAsync<WebShopMercantec.Shared.DTOs.UserDto>("/api/Users/me");
+                _credits = user?.AvailableCredits ?? 0;
+            }
+            catch
+            {
+                _credits = 0;
+            }
+        }
+    }
+}

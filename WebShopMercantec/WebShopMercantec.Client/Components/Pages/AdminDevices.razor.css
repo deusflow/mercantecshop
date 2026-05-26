@@ -1,0 +1,182 @@
+.add-device-card {
+    padding: 1.5rem;
+}
+
+.device-form-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.form-group label {
+    font-size: 0.92rem;
+    font-weight: 500;
+    color: var(--color-text-secondary);
+}
+
+.checkbox-group {
+    justify-content: center;
+}
+
+.checkbox-group label {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin-top: 1.55rem;
+}
+
+.devices-toolbar input {
+    max-width: 320px;
+}
+
+.devices-filters {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.filter-select {
+    min-width: 180px;
+}
+
+.filter-search {
+    min-width: 260px;
+    max-width: 360px;
+}
+
+.status-select {
+    min-width: 180px;
+}
+
+.price-cell {
+    min-width: 140px;
+}
+
+.price-input {
+    max-width: 120px;
+    margin-left: auto;
+    text-align: right;
+}
+
+.device-actions {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+}
+
+.category-table th:first-child,
+.category-table td:first-child {
+    width: 90px;
+}
+
+.category-row.state-saved {
+    box-shadow: inset 3px 0 0 rgba(48, 209, 88, 0.65);
+}
+
+.category-row.state-dirty {
+    box-shadow: inset 3px 0 0 rgba(255, 159, 10, 0.75);
+}
+
+.category-row.state-failed {
+    box-shadow: inset 3px 0 0 rgba(255, 69, 58, 0.8);
+}
+
+.category-row.state-saving {
+    box-shadow: inset 3px 0 0 rgba(10, 132, 255, 0.8);
+}
+
+.category-name {
+    font-weight: 600;
+    color: var(--color-text-primary);
+}
+
+.category-stock {
+    color: var(--color-text-secondary);
+    font-variant-numeric: tabular-nums;
+}
+
+.category-badge {
+    font-size: 12px;
+    font-weight: 600;
+    background: var(--color-surface-elevated);
+    color: var(--color-text-secondary);
+}
+
+.state-saved .category-badge {
+    color: var(--color-success);
+}
+
+.state-dirty .category-badge {
+    color: var(--color-warning);
+}
+
+.state-failed .category-badge {
+    color: var(--color-error);
+}
+
+.state-saving .category-badge {
+    color: var(--color-accent);
+}
+
+.apple-checkbox {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--color-accent);
+    cursor: pointer;
+}
+
+@media (max-width: 1024px) {
+    .device-form-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .category-table th,
+    .category-table td {
+        padding: 0.75rem 0.6rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .device-form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .checkbox-group label {
+        margin-top: 0;
+    }
+
+    .devices-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
+    }
+
+    .devices-toolbar input {
+        max-width: 100%;
+    }
+
+    .devices-filters {
+        width: 100%;
+    }
+
+    .filter-select,
+    .filter-search {
+        min-width: 100%;
+        max-width: 100%;
+    }
+
+    .device-actions {
+        flex-direction: column;
+    }
+
+    .category-table {
+        font-size: 0.92rem;
+    }
+}

@@ -1,0 +1,354 @@
+@page "/user-profile"
+@using WebShopMercantec.Shared.DTOs
+@attribute [Authorize]
+@inject HttpClient Http
+
+<PageTitle>User Profile - TechShop</PageTitle>
+
+<!-- USER PROFILE -->
+<div class="profile-container fade-in">
+    @if (_isLoading)
+    {
+        <div class="text-center" style="padding: 50px;">
+            <p>Loading profile...</p>
+        </div>
+    }
+    else if (!string.IsNullOrWhiteSpace(_error))
+    {
+        <div class="alert alert-danger" role="alert" style="margin: 20px;">
+            @_error
+        </div>
+    }
+    else if (_user != null)
+    {
+        <!-- HEADER -->
+        <div class="page-header text-center">
+            <h1>Your Profile</h1>
+            <p class="mx-auto">Manage your account, view history, and track your credits.</p>
+        </div>
+
+        <div class="profile-layout mt-xl">
+            
+            <!-- LEFT COLUMN: USER INFO -->
+            <div class="profile-sidebar">
+                
+                <!-- User card -->
+                <div class="card user-info-card text-center">
+                    <div class="user-avatar">
+                        <span>@(_user.Initials)</span>
+                    </div>
+                    <h3 class="user-name mt-lg">@_user.FullName</h3>
+                    <p class="user-email">@_user.Email</p>
+                    
+                    <!-- Credits balance -->
+                    <div class="credits-display">
+                        <span class="credits-label">Available Credits</span>
+                        <span class="credits-amount">@_user.AvailableCredits.ToString("N0")</span>
+                    </div>
+                </div>
+
+                <!-- Stats -->
+                <div class="card stats-card">
+                    <div class="stat-item">
+                        <span class="stat-label">Total Purchases</span>
+                        <span class="stat-value">@_user.TotalPurchases</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Credits Spent</span>
+                        <span class="stat-value">@_user.TotalCreditsSpent.ToString("N0")</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Member Since</span>
+                        <span class="stat-value">@(_user.CreatedAt?.ToString("MMM yyyy") ?? "N/A")</span>
+                    </div>
+                </div>
+                
+                @if (!_isEditing)
+                {
+                    <button class="btn btn-secondary" style="width: 100%;" @onclick="EditProfile">
+                        Edit Profile
+                    </button>
+                }
+                else
+                {
+                    <div class="card mt-md" style="padding: 15px;">
+                        <h4 class="mb-sm">Edit Profile</h4>
+                        <div class="form-group mb-sm">
+                            <label>First Name</label>
+                            <input type="text" class="form-input w-100" @bind="_editModel.FirstName" />
+                        </div>
+                        <div class="form-group mb-md">
+                            <label>Last Name</label>
+                            <input type="text" class="form-input w-100" @bind="_editModel.LastName" />
+                        </div>
+                        <div class="flex gap-sm">
+                            <button class="btn btn-primary flex-1" @onclick="SaveProfileAsync" disabled="@_isSaving">
+                                @(_isSaving ? "Saving..." : "Save")
+                            </button>
+                            <button class="btn btn-secondary flex-1" @onclick="CancelEdit" disabled="@_isSaving">
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <!-- RIGHT COLUMN: PURCHASE HISTORY -->
+            <div class="profile-content">
+                
+                <!-- Transaction history -->
+                <div class="card">
+                    <div class="flex-between mb-lg">
+                        <h2>Transaction History</h2>
+                        <button class="btn btn-secondary btn-small">Export Data</button>
+                    </div>
+
+                    <div class="table-container">
+                        @if (_transactions == null)
+                        {
+                            <p>Loading transactions...</p>
+                        }
+                        else if (_transactions.Count == 0)
+                        {
+                            <p>No transactions found.</p>
+                        }
+                        else
+                        {
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Item</th>
+                                        <th>Type</th>
+                                        <th class="text-right">Credits</th>
+                                        <th class="text-center">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var tx in _transactions)
+                                    {
+                                        <tr>
+                                            <td>@tx.CreatedAt.ToString("MMM dd, yyyy")</td>
+                                            <td>@tx.ItemName</td>
+                                            <td>@tx.Type</td>
+                                            <td class="text-right @(tx.Amount > 0 ? "text-success" : "")">
+                                                @(tx.Amount > 0 ? "+" : "")@tx.Amount.ToString("N0")
+                                            </td>
+                                            <td class="text-center">
+                                                <span class="badge @((tx.Status ?? "").Equals("Completed", StringComparison.OrdinalIgnoreCase) ? "badge-success" : "badge-primary")">
+                                                    @(string.IsNullOrWhiteSpace(tx.Status) ? "Completed" : tx.Status)
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        }
+                    </div>
+                </div>
+
+                <!-- Order history -->
+                <div class="card mt-md">
+                    <div class="flex-between mb-lg">
+                        <h2>Order History</h2>
+                        <button class="btn btn-secondary btn-small">Export Data</button>
+                    </div>
+
+                    <div class="table-container">
+                        @if (_orders == null)
+                        {
+                            <p>Loading orders...</p>
+                        }
+                        else if (_orders.Count == 0)
+                        {
+                            <p>No orders found.</p>
+                        }
+                        else
+                        {
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Order ID</th>
+                                        <th>Date</th>
+                                        <th>Status</th>
+                                        <th class="text-right">Total Credits</th>
+                                        <th class="text-center">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var order in _orders)
+                                    {
+                                        <tr>
+                                            <td>@order.Id</td>
+                                            <td>@(order.CreatedAt?.ToString("MMM dd, yyyy") ?? "N/A")</td>
+                                            <td>
+                                                <span class="badge @((order.Status ?? "").Equals("Pending", StringComparison.OrdinalIgnoreCase) ? "badge-warning" : (order.Status.Equals("Fulfilled", StringComparison.OrdinalIgnoreCase) ? "badge-success" : "badge-secondary"))">
+                                                    @(string.IsNullOrWhiteSpace(order.Status) ? "Pending" : order.Status)
+                                                </span>
+                                            </td>
+                                            <td class="text-right">@order.TotalPrice.ToString("N0")</td>
+                                            <td class="text-center">
+                                                @if (order.Status?.Equals("Pending", StringComparison.OrdinalIgnoreCase) == true)
+                                                {
+                                                    <button class="btn btn-danger btn-small" @onclick="() => CancelOrderAsync(order.Id)">
+                                                        Cancel Order
+                                                    </button>
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private bool _isLoading = true;
+    private string? _error;
+    private UserDto? _user;
+    private List<TransactionDto>? _transactions;
+    private List<OrderDto>? _orders;
+
+    private bool _isEditing = false;
+    private bool _isSaving = false;
+    private UserDto _editModel = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadProfileDataAsync();
+    }
+
+    private void EditProfile()
+    {
+        if (_user != null)
+        {
+            _editModel = new UserDto 
+            { 
+                FirstName = _user.FirstName, 
+                LastName = _user.LastName 
+            };
+            _isEditing = true;
+        }
+    }
+
+    private void CancelEdit()
+    {
+        _isEditing = false;
+    }
+
+    private async Task SaveProfileAsync()
+    {
+        if (_user == null) return;
+        
+        _isSaving = true;
+        try
+        {
+            var updateDto = new UserDto
+            {
+                Id = _user.Id,
+                FirstName = _editModel.FirstName,
+                LastName = _editModel.LastName,
+                Email = _user.Email,
+                Username = _user.Username
+            };
+            
+            var response = await Http.PutAsJsonAsync("/api/Users/me", updateDto);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var updatedUser = await response.Content.ReadFromJsonAsync<UserDto>();
+                if (updatedUser != null)
+                {
+                    _user = updatedUser;
+                }
+                _isEditing = false;
+            }
+            else
+            {
+                // Optionally handle error message
+                var errorText = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"Save failed: {errorText}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error saving profile: {ex.Message}");
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    private async Task CancelOrderAsync(int orderId)
+    {
+        try
+        {
+            var response = await Http.PostAsync($"/api/Orders/{orderId}/cancel", null);
+            if (response.IsSuccessStatusCode)
+            {
+                // Refresh data to show updated state and refunded credits
+                await LoadProfileDataAsync();
+            }
+            else 
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"Cancel failed: {error}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error canceling order: {ex.Message}");
+        }
+    }
+
+    private async Task LoadProfileDataAsync()
+    {
+        _isLoading = true;
+        _error = null;
+
+        try
+        {
+            // Fetch user profile
+            _user = await Http.GetFromJsonAsync<UserDto>("/api/Users/me");
+
+            // Attempt to fetch transactions (graceful fallback if endpoint doesn't exist yet)
+            try 
+            {
+                _transactions = await Http.GetFromJsonAsync<List<TransactionDto>>("/api/Users/me/transactions");
+            }
+            catch
+            {
+                _transactions = new List<TransactionDto>();
+            }
+
+            // Fetch orders
+            try 
+            {
+                _orders = await Http.GetFromJsonAsync<List<OrderDto>>("/api/Orders/my");
+            }
+            catch
+            {
+                _orders = new List<OrderDto>();
+            }
+        }
+        catch (HttpRequestException ex)
+        {
+            _error = $"Failed to load profile data (HTTP {ex.StatusCode}).";
+        }
+        catch (Exception ex)
+        {
+            _error = "An error occurred while loading your profile data.";
+            Console.WriteLine(ex);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+}
