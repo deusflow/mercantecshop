@@ -29,5 +29,4 @@ volumes:
 
 networks:
   snipeit_default:
-    external: true  
-
+    external: true  # Connects to the existing Snipe-IT container network
